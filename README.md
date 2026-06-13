@@ -92,3 +92,5 @@ git push
 ```
 
 Render auto-redeploys on push to `main`.
+
+**Live site:** https://cfb-viewer.onrender.com
