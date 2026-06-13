@@ -2,7 +2,6 @@
 {% block title %}Leaderboard — CFB Simulation Viewer{% endblock %}
 {% block content %}
 <h1>Championship Leaderboard</h1>
-<p class="subtitle">Title odds, playoff eligibility, and per-season rating (N(0, {{ meta.fpi_sigma | default(10) }}), clamped) across {{ meta.sim_count }} simulations.</p>
 
 <form class="filters" method="get">
   <label>
