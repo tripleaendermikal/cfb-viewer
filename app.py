@@ -151,7 +151,14 @@ def create_app() -> Flask:
     @app.route("/")
     def leaderboard():
         conf_filter = request.args.get("conference", "").strip()
-        rows = store.fbs_leaderboard
+        rows = sorted(
+            store.fbs_leaderboard,
+            key=lambda r: (
+                r.get("baseline_fpi") is None,
+                -(r.get("baseline_fpi") if r.get("baseline_fpi") is not None else -999),
+                r.get("team_name", "").lower(),
+            ),
+        )
         if conf_filter:
             rows = [r for r in rows if r.get("conference") == conf_filter]
         return render_template(

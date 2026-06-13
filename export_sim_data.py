@@ -487,7 +487,13 @@ def main() -> int:
     baseline_by_id = build_baseline_fpi(games_fpi_rows)
     enrich_leaderboard_fpi(leaderboard, baseline_by_id, conf_by_id)
     leaderboard = [r for r in leaderboard if is_fbs_conference(r.get("conference", ""))]
-    leaderboard.sort(key=lambda r: (-r["title_odds_pct"], r["team_name"]))
+    leaderboard.sort(
+        key=lambda r: (
+            r.get("baseline_fpi") is None,
+            -(r.get("baseline_fpi") if r.get("baseline_fpi") is not None else -999),
+            r["team_name"].lower(),
+        )
+    )
 
     _, elig_rows = read_csv(SOURCES["elig"])
     eligibility = build_eligibility(elig_rows, sim_cols, name_to_id)

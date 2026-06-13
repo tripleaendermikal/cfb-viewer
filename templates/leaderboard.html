@@ -2,7 +2,7 @@
 {% block title %}Leaderboard — CFB Simulation Viewer{% endblock %}
 {% block content %}
 <h1>Championship Leaderboard</h1>
-<p class="subtitle">Title odds, playoff eligibility, and seeding across {{ meta.sim_count }} simulations. Baseline FPI with 90% CI for per-season rating (N(0, {{ meta.fpi_sigma | default(10) }}), clamped).</p>
+<p class="subtitle">Title odds, playoff eligibility, and per-season rating (N(0, {{ meta.fpi_sigma | default(10) }}), clamped) across {{ meta.sim_count }} simulations.</p>
 
 <form class="filters" method="get">
   <label>
@@ -25,12 +25,11 @@
       <th data-sort="num">#</th>
       <th data-sort="text">Team</th>
       <th data-sort="text">Conference</th>
-      <th data-sort="num">Baseline FPI</th>
-      <th data-sort="num">90% FPI CI</th>
+      <th data-sort="num">Rating</th>
+      <th data-sort="num">Rating Range</th>
       <th data-sort="num">Title Odds</th>
       <th data-sort="num">Playoff %</th>
       <th data-sort="num">Avg Wins</th>
-      <th data-sort="num">Avg Seed</th>
     </tr>
   </thead>
   <tbody>
@@ -48,16 +47,13 @@
       <td class="num" data-value="{{ row.baseline_fpi if row.baseline_fpi is not none else '' }}">
         {% if row.baseline_fpi is not none %}{{ "%.1f"|format(row.baseline_fpi) }}{% else %}—{% endif %}
       </td>
-      <td class="num" data-value="{{ row.baseline_fpi if row.baseline_fpi is not none else '' }}">
+      <td class="num" data-value="{{ row.fpi_ci_low if row.fpi_ci_low is not none else '' }}">
         {% if row.fpi_ci_low is not none and row.fpi_ci_high is not none %}{{ "%.1f"|format(row.fpi_ci_low) }} – {{ "%.1f"|format(row.fpi_ci_high) }}{% else %}—{% endif %}
       </td>
       <td class="num" data-value="{{ row.title_odds_pct }}">{{ row.title_odds_pct }}%</td>
       <td class="num" data-value="{{ row.eligibility_pct }}">{{ row.eligibility_pct }}%</td>
       <td class="num" data-value="{{ row.avg_wins if row.avg_wins is not none else '' }}">
         {% if row.avg_wins is not none %}{{ "%.2f"|format(row.avg_wins) }}{% else %}—{% endif %}
-      </td>
-      <td class="num" data-value="{{ row.avg_seed_when_in }}">
-        {% if row.eligibility_pct %}{{ "%.2f"|format(row.avg_seed_when_in) }}{% else %}—{% endif %}
       </td>
     </tr>
     {% endfor %}

@@ -26,8 +26,8 @@
   {% endif %}
 </form>
 
-<h2>Team Ratings</h2>
-<p class="muted">{{ teams|length }} teams shown · margin rating = expected point margin vs median FBS team</p>
+<h2>Team Margins</h2>
+<p class="muted">{{ teams|length }} teams shown · expected point margin vs median FBS team</p>
 
 <table class="data-table">
   <thead>
@@ -35,10 +35,7 @@
       <th data-sort="num">#</th>
       <th data-sort="text">Team</th>
       <th data-sort="text">Conference</th>
-      <th data-sort="num">Rating</th>
       <th data-sort="num">Margin</th>
-      <th data-sort="num">R</th>
-      <th data-sort="num">RS</th>
     </tr>
   </thead>
   <tbody>
@@ -51,12 +48,9 @@
         <span class="badge" style="background:{{ row.conference | conf_color }}">{{ row.conference }}</span>
         {% endif %}
       </td>
-      <td class="num" data-value="{{ row.rating }}">{{ "%.4f"|format(row.rating) }}</td>
       <td class="num" data-value="{{ row.margin_rating }}">
         {% if row.margin_rating > 0 %}+{% endif %}{{ "%.1f"|format(row.margin_rating) }}
       </td>
-      <td class="num" data-value="{{ row.r }}">{{ "%.4f"|format(row.r) }}</td>
-      <td class="num" data-value="{{ row.rs }}">{{ "%.4f"|format(row.rs) }}</td>
     </tr>
     {% endfor %}
   </tbody>
