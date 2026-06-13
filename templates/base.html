@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CFB Simulation Viewer{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="navbar">
+    <a class="brand" href="{{ url_for('leaderboard') }}">CFB {{ meta.season_year }} Sims</a>
+    <nav>
+      <a href="{{ url_for('leaderboard') }}" class="{% if active == 'leaderboard' %}active{% endif %}">Leaderboard</a>
+      <a href="{{ url_for('compare') }}" class="{% if active == 'compare' %}active{% endif %}">Compare</a>
+      <a href="{{ url_for('fields') }}" class="{% if active == 'fields' %}active{% endif %}">Playoff Fields</a>
+      <a href="{{ url_for('schedule') }}" class="{% if active == 'schedule' %}active{% endif %}">Schedule</a>
+      <a href="{{ url_for('conferences') }}" class="{% if active == 'conferences' %}active{% endif %}">Conferences</a>
+      <a href="{{ url_for('last_year') }}" class="{% if active == 'last_year' %}active{% endif %}">Last Year</a>
+    </nav>
+    <div class="meta">{{ meta.sim_count }} sims · {{ meta.team_count }} teams</div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    document.querySelectorAll('table.data-table').forEach(function(table) {
+      var headers = table.querySelectorAll('th[data-sort]');
+      headers.forEach(function(th, colIdx) {
+        th.addEventListener('click', function() {
+          var tbody = table.querySelector('tbody');
+          var rows = Array.from(tbody.querySelectorAll('tr'));
+          var type = th.dataset.sort;
+          var asc = !th.classList.contains('sorted-asc');
+          headers.forEach(function(h) { h.classList.remove('sorted-asc', 'sorted-desc'); });
+          th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+          rows.sort(function(a, b) {
+            var av = a.children[colIdx].dataset.value || a.children[colIdx].textContent.trim();
+            var bv = b.children[colIdx].dataset.value || b.children[colIdx].textContent.trim();
+            if (type === 'num') {
+              av = parseFloat(av) || 0;
+              bv = parseFloat(bv) || 0;
+              return asc ? av - bv : bv - av;
+            }
+            return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+          });
+          rows.forEach(function(r) { tbody.appendChild(r); });
+        });
+      });
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

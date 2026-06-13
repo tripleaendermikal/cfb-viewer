@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Conferences — CFB Simulation Viewer{% endblock %}
+{% block content %}
+<h1>Conference Summary</h1>
+<p class="subtitle">Aggregated title odds and playoff representation by conference</p>
+
+<div class="card-grid">
+  {% for c in conferences %}
+  <a href="{{ url_for('conferences', conference=c.conference) }}" class="card" style="text-decoration:none;color:inherit;">
+    <h3 style="margin:0 0 0.5rem;">
+      <span class="badge" style="background:{{ c.conference | conf_color }}">{{ c.conference }}</span>
+      {% if c.is_group_of_6 %}<span class="muted" style="font-size:0.8rem;">G6</span>{% endif %}
+    </h3>
+    <div class="stat-label">Title odds (sum)</div>
+    <div class="stat-value" style="font-size:1.25rem;">{{ c.total_title_odds_pct }}%</div>
+    <div class="muted" style="font-size:0.85rem;margin-top:0.5rem;">
+      {{ c.team_count }} teams · {{ c.sims_with_member_pct }}% of sims with member
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Conference</th>
+      <th data-sort="num">Teams</th>
+      <th data-sort="num">Title Odds Σ</th>
+      <th data-sort="num">Playoff Apps Σ</th>
+      <th data-sort="num">Sims w/ Member</th>
+      <th data-sort="num">Member %</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in conferences %}
+    <tr>
+      <td data-value="{{ c.conference }}">
+        <a href="{{ url_for('conferences', conference=c.conference) }}">
+          <span class="badge" style="background:{{ c.conference | conf_color }}">{{ c.conference }}</span>
+        </a>
+      </td>
+      <td class="num" data-value="{{ c.team_count }}">{{ c.team_count }}</td>
+      <td class="num" data-value="{{ c.total_title_odds_pct }}">{{ c.total_title_odds_pct }}%</td>
+      <td class="num" data-value="{{ c.total_playoff_appearances }}">{{ c.total_playoff_appearances }}</td>
+      <td class="num" data-value="{{ c.sims_with_member }}">{{ c.sims_with_member }}</td>
+      <td class="num" data-value="{{ c.sims_with_member_pct }}">{{ c.sims_with_member_pct }}%</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

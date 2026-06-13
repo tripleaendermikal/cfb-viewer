@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ team.team_name }} — CFB Simulation Viewer{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+{% block content %}
+<h1>{{ team.team_name }}</h1>
+<p class="subtitle">
+  {% if team.conference %}
+  <span class="badge" style="background:{{ team.conference | conf_color }}">{{ team.conference }}</span>
+  {% endif %}
+  <a href="{{ url_for('schedule', team=team.team_id) }}">View schedule</a>
+  · <a href="{{ url_for('compare', teams=team.team_id) }}">Compare</a>
+</p>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="stat-label">Title Odds</div>
+    <div class="stat-value">{{ team.title_odds_pct }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Playoff Eligibility</div>
+    <div class="stat-value">{{ team.eligibility_pct }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Playoff Appearances</div>
+    <div class="stat-value">{{ team.playoff_appearances }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Avg Wins</div>
+    <div class="stat-value">{{ "%.2f"|format(team.avg_wins or 0) }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Avg Seed (when in)</div>
+    <div class="stat-value">
+      {% if team.playoff_appearances %}{{ "%.2f"|format(team.avg_seed_when_in) }}{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;font-size:1.1rem;">Win distribution ({{ meta.sim_count }} sims)</h2>
+  <div class="chart-wrap">
+    <canvas id="winChart"></canvas>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  new Chart(document.getElementById('winChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ hist_labels | tojson }},
+      datasets: [{
+        label: 'Sim count',
+        data: {{ hist_data | tojson }},
+        backgroundColor: '#3d8bfd99',
+        borderColor: '#3d8bfd',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'Wins' } },
+        y: { title: { display: true, text: 'Simulations' }, beginAtZero: true }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+</script>
+{% endblock %}

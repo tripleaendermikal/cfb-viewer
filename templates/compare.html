@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Compare Teams — CFB Simulation Viewer{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+{% block content %}
+<h1>Compare Teams</h1>
+<p class="subtitle">Select 2–4 teams to compare win distributions and playoff metrics</p>
+
+<form class="filters" method="get" id="compareForm">
+  <div class="team-picker" id="teamPicker">
+    {% for i in range(4) %}
+    <select name="teams" class="team-select">
+      <option value="">— Team {{ i + 1 }} —</option>
+      {% for t in team_options %}
+      <option value="{{ t.team_id }}" {% if selected_ids|length > i and selected_ids[i] == t.team_id %}selected{% endif %}>
+        {{ t.team_name }}
+      </option>
+      {% endfor %}
+    </select>
+    {% endfor %}
+    <button type="submit" class="btn">Compare</button>
+  </div>
+</form>
+
+{% if selected|length >= 2 %}
+<div class="compare-grid">
+  {% for t in selected %}
+  <div class="card">
+    <h3 style="margin:0 0 0.5rem;font-size:1rem;">
+      <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+    </h3>
+    {% if t.conference %}
+    <span class="badge" style="background:{{ t.conference | conf_color }}">{{ t.conference }}</span>
+    {% endif %}
+    <table class="data-table" style="margin-top:0.75rem;">
+      <tr><td>Title odds</td><td class="num">{{ t.title_odds_pct }}%</td></tr>
+      <tr><td>Elig %</td><td class="num">{{ t.eligibility_pct }}%</td></tr>
+      <tr><td>Playoff apps</td><td class="num">{{ t.playoff_appearances }}</td></tr>
+      <tr><td>Avg wins</td><td class="num">{{ "%.2f"|format(t.avg_wins or 0) }}</td></tr>
+      <tr><td>Avg seed</td><td class="num">{% if t.playoff_appearances %}{{ "%.2f"|format(t.avg_seed_when_in) }}{% else %}—{% endif %}</td></tr>
+    </table>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;font-size:1.1rem;">Overlaid win distributions</h2>
+  <div class="chart-wrap tall">
+    <canvas id="compareChart"></canvas>
+  </div>
+</div>
+{% elif selected_ids %}
+<p class="error">Select at least 2 valid teams to compare.</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if selected|length >= 2 %}
+<script>
+  new Chart(document.getElementById('compareChart'), {
+    type: 'bar',
+    data: {
+      labels: ['0','1','2','3','4','5','6','7','8','9','10','11','12'],
+      datasets: {{ chart_datasets | tojson }}
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'Wins' } },
+        y: { title: { display: true, text: 'Simulations' }, beginAtZero: true }
+      }
+    }
+  });
+</script>
+{% endif %}
+<script>
+  document.getElementById('compareForm').addEventListener('submit', function(e) {
+    var ids = Array.from(document.querySelectorAll('.team-select'))
+      .map(function(s) { return s.value; })
+      .filter(Boolean);
+    if (ids.length < 2) {
+      e.preventDefault();
+      alert('Pick at least 2 teams.');
+      return;
+    }
+    var seen = new Set();
+    for (var i = 0; i < ids.length; i++) {
+      if (seen.has(ids[i])) {
+        e.preventDefault();
+        alert('Each team can only be selected once.');
+        return;
+      }
+      seen.add(ids[i]);
+    }
+  });
+</script>
+{% endblock %}

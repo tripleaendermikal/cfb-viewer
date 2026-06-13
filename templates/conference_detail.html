@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ conf.conference }} — CFB Simulation Viewer{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('conferences') }}">← All conferences</a></p>
+<h1>{{ conf.conference }}</h1>
+<p class="subtitle">
+  {% if conf.is_group_of_6 %}Group of 6 · {% endif %}
+  {{ conf.team_count }} teams · {{ conf.sims_with_member_pct }}% of sims include a member
+</p>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="stat-label">Total Title Odds</div>
+    <div class="stat-value">{{ conf.total_title_odds_pct }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Playoff Appearances</div>
+    <div class="stat-value">{{ conf.total_playoff_appearances }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Sims with Member</div>
+    <div class="stat-value">{{ conf.sims_with_member }}</div>
+  </div>
+</div>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Team</th>
+      <th data-sort="num">Avg Wins</th>
+      <th data-sort="num">Title Odds</th>
+      <th data-sort="num">Elig %</th>
+      <th data-sort="num">Playoff Apps</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in conf.teams %}
+    <tr>
+      <td data-value="{{ t.team_name }}">
+        <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+      </td>
+      <td class="num" data-value="{{ t.avg_wins }}">{{ "%.2f"|format(t.avg_wins) }}</td>
+      <td class="num" data-value="{{ t.title_odds_pct }}">{{ t.title_odds_pct }}%</td>
+      <td class="num" data-value="{{ t.eligibility_pct }}">{{ t.eligibility_pct }}%</td>
+      <td class="num" data-value="{{ t.playoff_appearances }}">{{ t.playoff_appearances }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Playoff Field Analysis — CFB Simulation Viewer{% endblock %}
+{% block content %}
+<h1>Playoff Field Analysis</h1>
+<p class="subtitle">{{ analysis.unique_field_count }} unique 12-team fields across {{ meta.sim_count }} simulations</p>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="stat-label">Unique Fields</div>
+    <div class="stat-value">{{ analysis.unique_field_count }}</div>
+  </div>
+  {% set closest = analysis.closest_fields %}
+  <div class="card">
+    <div class="stat-label">Closest Field Pair</div>
+    <div class="stat-value">{{ closest.shared_count }}/12 shared</div>
+    <div class="muted" style="font-size:0.85rem;">Sim {{ closest.sim_a + 1 }} vs Sim {{ closest.sim_b + 1 }}</div>
+  </div>
+</div>
+
+<h2>Most Frequent Playoff Teams</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Team</th>
+      <th data-sort="num">Count</th>
+      <th data-sort="num">%</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in analysis.top_teams %}
+    <tr>
+      <td data-value="{{ t.team_name }}">
+        <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+      </td>
+      <td class="num" data-value="{{ t.count }}">{{ t.count }}</td>
+      <td class="num" data-value="{{ t.pct }}">{{ t.pct }}%</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Top Team Pairs (both in field)</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Pair</th>
+      <th data-sort="num">Count</th>
+      <th data-sort="num">%</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in analysis.top_pairs %}
+    <tr>
+      <td data-value="{{ p.team_a_name }}">
+        <a href="{{ url_for('team_detail', team_id=p.team_a_id) }}">{{ p.team_a_name }}</a>
+        +
+        <a href="{{ url_for('team_detail', team_id=p.team_b_id) }}">{{ p.team_b_name }}</a>
+      </td>
+      <td class="num" data-value="{{ p.count }}">{{ p.count }}</td>
+      <td class="num" data-value="{{ p.pct }}">{{ p.pct }}%</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="card field-lookup">
+  <h2 style="margin-top:0;font-size:1.1rem;">Sim field lookup</h2>
+  <form class="filters" method="get">
+    <label>
+      Simulation (1–{{ meta.sim_count }})
+      <input type="number" name="sim" min="1" max="{{ meta.sim_count }}" value="{{ sim_index or '' }}" placeholder="e.g. 50">
+    </label>
+    <button type="submit" class="btn">Show field</button>
+  </form>
+  {% if sim_error %}
+  <p class="error">{{ sim_error }}</p>
+  {% elif sim_field %}
+  <p><strong>Sim {{ sim_index }} — 12-team field</strong></p>
+  <div class="field-team-list">
+    {% for t in sim_field %}
+    <span>
+      <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+      {% if t.conference %}
+      <span class="badge" style="background:{{ t.conference | conf_color }};font-size:0.7rem;">{{ t.conference }}</span>
+      {% endif %}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

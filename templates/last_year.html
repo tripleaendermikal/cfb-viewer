@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Last Year — CFB Simulation Viewer{% endblock %}
+{% block content %}
+<h1>Last Year ({{ last_year.season_year | default(2025) }})</h1>
+<p class="subtitle">
+  FBS team ratings and game results from the {{ last_year.season_year | default(2025) }} season.
+  {{ last_year.team_count | default(teams|length) }} teams · {{ last_year.game_count | default(games|length) }} FBS vs FBS games.
+</p>
+
+{% if not last_year %}
+<p class="muted">No 2025 data loaded. Run <code>python export_sim_data.py</code> to generate <code>data/last_year.json</code>.</p>
+{% else %}
+
+<form class="filters" method="get">
+  <label>
+    Conference
+    <select name="conference" onchange="this.form.submit()">
+      <option value="">All conferences</option>
+      {% for c in conferences %}
+      <option value="{{ c }}" {% if c == conf_filter %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if conf_filter %}
+  <a href="{{ url_for('last_year') }}" class="btn" style="text-decoration:none;display:inline-block;">Clear filter</a>
+  {% endif %}
+</form>
+
+<h2>Team Ratings</h2>
+<p class="muted">{{ teams|length }} teams shown · margin rating = expected point margin vs median FBS team</p>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th data-sort="num">#</th>
+      <th data-sort="text">Team</th>
+      <th data-sort="text">Conference</th>
+      <th data-sort="num">Rating</th>
+      <th data-sort="num">Margin</th>
+      <th data-sort="num">R</th>
+      <th data-sort="num">RS</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in teams %}
+    <tr>
+      <td class="num" data-value="{{ loop.index }}">{{ loop.index }}</td>
+      <td data-value="{{ row.team_name }}">{{ row.team_name }}</td>
+      <td data-value="{{ row.conference }}">
+        {% if row.conference %}
+        <span class="badge" style="background:{{ row.conference | conf_color }}">{{ row.conference }}</span>
+        {% endif %}
+      </td>
+      <td class="num" data-value="{{ row.rating }}">{{ "%.4f"|format(row.rating) }}</td>
+      <td class="num" data-value="{{ row.margin_rating }}">
+        {% if row.margin_rating > 0 %}+{% endif %}{{ "%.1f"|format(row.margin_rating) }}
+      </td>
+      <td class="num" data-value="{{ row.r }}">{{ "%.4f"|format(row.r) }}</td>
+      <td class="num" data-value="{{ row.rs }}">{{ "%.4f"|format(row.rs) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Games</h2>
+<p class="muted">{{ games|length }} games shown</p>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Date</th>
+      <th data-sort="num">Week</th>
+      <th data-sort="text">Away</th>
+      <th data-sort="num">Away Pts</th>
+      <th data-sort="num">Away Yds</th>
+      <th data-sort="text">Home</th>
+      <th data-sort="num">Home Pts</th>
+      <th data-sort="num">Home Yds</th>
+      <th data-sort="text">Site</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for g in games %}
+    <tr>
+      <td data-value="{{ g.game_date }}">{{ g.game_date }}</td>
+      <td class="num" data-value="{{ g.week }}">{{ g.week }}</td>
+      <td data-value="{{ g.away_team }}">{{ g.away_team }}</td>
+      <td class="num" data-value="{{ g.away_points }}">{{ g.away_points }}</td>
+      <td class="num" data-value="{{ g.away_yards }}">{{ g.away_yards }}</td>
+      <td data-value="{{ g.home_team }}">{{ g.home_team }}</td>
+      <td class="num" data-value="{{ g.home_points }}">{{ g.home_points }}</td>
+      <td class="num" data-value="{{ g.home_yards }}">{{ g.home_yards }}</td>
+      <td data-value="{% if g.neutral_site %}neutral{% else %}home{% endif %}">
+        {% if g.neutral_site %}neutral{% else %}home{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
