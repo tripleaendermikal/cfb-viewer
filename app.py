@@ -53,6 +53,9 @@ class DataStore:
             c for c in self._load(data_dir / "conferences.json")
             if is_fbs_conference(c.get("conference", ""))
         ]
+        self.games = self._load_optional(data_dir / "games.json")
+        self.conf_championship = self._load_optional(data_dir / "conf_championship.json")
+        self.brackets = self._load_optional(data_dir / "brackets.json")
 
         self.teams_by_id = {t["team_id"]: t for t in self.teams}
         self.fbs_leaderboard = [
@@ -118,6 +121,30 @@ class DataStore:
             return fields[sim_index]
         return None
 
+    def game_at(self, game_id: str) -> dict | None:
+        if isinstance(self.games, dict):
+            return self.games.get(str(game_id))
+        return None
+
+    def conf_champs_at(self, sim_index: int) -> dict[str, dict] | None:
+        champs = self.conf_championship.get("champions_by_sim", [])
+        if 0 <= sim_index < len(champs):
+            row = champs[sim_index]
+            return {
+                conf: {
+                    "team_id": tid,
+                    "team_name": self.team_name(tid),
+                }
+                for conf, tid in row.items()
+            }
+        return None
+
+    def bracket_at(self, sim_index: int) -> dict | None:
+        by_sim = self.brackets.get("by_sim", [])
+        if 0 <= sim_index < len(by_sim):
+            return by_sim[sim_index]
+        return None
+
 
 def is_fbs_conference(conf: str) -> bool:
     return bool(conf) and conf not in FCS_CONFERENCES and conf != "Unknown"
@@ -136,6 +163,10 @@ def create_app() -> Flask:
         return {
             "meta": store.meta,
             "conference_color": CONFERENCE_COLORS,
+            "team_search": [
+                {"id": t["team_id"], "name": t["team_name"]}
+                for t in store.fbs_teams
+            ],
         }
 
     @app.template_filter("conf_color")
@@ -147,6 +178,69 @@ def create_app() -> Flask:
         if val is None:
             return "—"
         return f"{float(val):.1f}%"
+
+    @app.route("/methodology")
+    def methodology():
+        return render_template("methodology.html", active="methodology")
+
+    @app.route("/game/<game_id>")
+    def game_detail(game_id: str):
+        game = store.game_at(game_id)
+        if not game:
+            abort(404)
+        compare_url = url_for(
+            "compare",
+            teams=f"{game['home_team_id']},{game['away_team_id']}",
+        )
+        return render_template(
+            "game.html",
+            game=game,
+            compare_url=compare_url,
+            active="schedule",
+        )
+
+    @app.route("/bracket")
+    def bracket():
+        sim_raw = request.args.get("sim", "").strip()
+        team_raw = request.args.get("team", "").strip()
+        sim_index = None
+        sim_bracket = None
+        sim_error = None
+        team_bracket = None
+
+        if sim_raw:
+            try:
+                sim_index = int(sim_raw)
+                n = store.brackets.get("sim_count", store.eligibility.get("sim_count", 1000))
+                if sim_index < 1 or sim_index > n:
+                    sim_error = f"Sim index must be 1–{n}"
+                else:
+                    sim_bracket = store.bracket_at(sim_index - 1)
+                    if not sim_bracket:
+                        sim_error = "Bracket data not available for this sim"
+            except ValueError:
+                sim_error = "Invalid sim index"
+
+        if team_raw:
+            summary = store.brackets.get("team_summary", {}).get(team_raw)
+            lb = store.lb_by_id.get(team_raw, {})
+            if summary or lb:
+                team_bracket = summary or {}
+                team_bracket.setdefault("team_name", store.team_name(team_raw))
+                team_bracket.setdefault("title_odds_pct", lb.get("title_odds_pct", 0))
+
+        team_options = store.fbs_teams
+        return render_template(
+            "bracket.html",
+            sim_index=sim_index,
+            sim_bracket=sim_bracket,
+            sim_error=sim_error,
+            team_filter=team_raw,
+            team_bracket=team_bracket,
+            team_options=team_options,
+            r1_pairings=store.brackets.get("r1_pairings", [[5, 12], [6, 11], [7, 10], [8, 9]]),
+            active="bracket",
+        )
 
     @app.route("/")
     def leaderboard():
@@ -186,12 +280,18 @@ def create_app() -> Flask:
             "title_odds_pct": lb.get("title_odds_pct", 0),
             "conf_champ_odds_pct": lb.get("conf_champ_odds_pct", 0),
             "eligibility_pct": lb.get("eligibility_pct", 0),
+            "conf_champ_appearances": lb.get("conf_champ_appearances", 0),
         }
+        ccg = store.conf_championship.get("team_summary", {}).get(team_id, {})
+        merged["ccg_appearances"] = ccg.get("ccg_appearances", merged["conf_champ_appearances"])
+        merged["ccg_wins"] = ccg.get("ccg_wins", 0)
+        bracket_summary = store.brackets.get("team_summary", {}).get(team_id)
         hist_labels = [str(i) for i in range(13)]
         hist_data = [merged["win_histogram"].get(str(i), 0) for i in range(13)]
         return render_template(
             "team.html",
             team=merged,
+            bracket_summary=bracket_summary,
             hist_labels=hist_labels,
             hist_data=hist_data,
             active="team",
@@ -248,6 +348,7 @@ def create_app() -> Flask:
         sim_index = None
         sim_field = None
         sim_error = None
+        sim_conf_champs = None
         if sim_raw:
             try:
                 sim_index = int(sim_raw)
@@ -264,6 +365,7 @@ def create_app() -> Flask:
                             }
                             for tid in ids
                         ]
+                    sim_conf_champs = store.conf_champs_at(sim_index - 1)
             except ValueError:
                 sim_error = "Invalid sim index"
         return render_template(
@@ -271,6 +373,7 @@ def create_app() -> Flask:
             analysis=store.field_analysis,
             sim_index=sim_index,
             sim_field=sim_field,
+            sim_conf_champs=sim_conf_champs,
             sim_error=sim_error,
             active="fields",
         )

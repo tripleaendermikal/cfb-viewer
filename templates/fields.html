@@ -75,7 +75,7 @@
   {% if sim_error %}
   <p class="error">{{ sim_error }}</p>
   {% elif sim_field %}
-  <p><strong>Sim {{ sim_index }} — 12-team field</strong></p>
+  <p><strong>Sim {{ sim_index }} — 12-team field</strong> · <a href="{{ url_for('bracket', sim=sim_index) }}">View bracket</a></p>
   <div class="field-team-list">
     {% for t in sim_field %}
     <span>
@@ -86,6 +86,17 @@
     </span>
     {% endfor %}
   </div>
+  {% if sim_conf_champs %}
+  <h3 style="margin-top:1.25rem;font-size:1rem;">Conference champions (this sim)</h3>
+  <div class="field-team-list">
+    {% for conf, info in sim_conf_champs|dictsort %}
+    <span>
+      <span class="badge" style="background:{{ conf | conf_color }};font-size:0.7rem;">{{ conf }}</span>
+      <a href="{{ url_for('team_detail', team_id=info.team_id) }}">{{ info.team_name }}</a>
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

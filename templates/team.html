@@ -11,6 +11,9 @@
   {% endif %}
   <a href="{{ url_for('schedule', team=team.team_id) }}">View schedule</a>
   · <a href="{{ url_for('compare', teams=team.team_id) }}">Compare</a>
+  {% if bracket_summary and bracket_summary.avg_seed is not none %}
+  · <a href="{{ url_for('bracket', team=team.team_id) }}">Bracket history</a>
+  {% endif %}
 </p>
 
 <div class="card-grid">
@@ -30,6 +33,18 @@
     <div class="stat-label">Avg Wins</div>
     <div class="stat-value">{{ "%.2f"|format(team.avg_wins or 0) }}</div>
   </div>
+  {% if team.conference != 'FBS Indep.' and team.ccg_appearances %}
+  <div class="card">
+    <div class="stat-label">CCG Record</div>
+    <div class="stat-value" style="font-size:1.1rem;">{{ team.ccg_wins }}-{{ team.ccg_appearances - team.ccg_wins }} ({{ team.ccg_appearances }} apps)</div>
+  </div>
+  {% endif %}
+  {% if bracket_summary and bracket_summary.avg_seed is not none %}
+  <div class="card">
+    <div class="stat-label">Avg Playoff Seed</div>
+    <div class="stat-value">{{ bracket_summary.avg_seed }}</div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="card">

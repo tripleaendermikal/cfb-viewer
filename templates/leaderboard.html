@@ -13,12 +13,17 @@
       {% endfor %}
     </select>
   </label>
+  <label>
+    Search
+    <input type="search" id="leaderboard-search" placeholder="Filter teams…">
+  </label>
   {% if conf_filter %}
   <a href="{{ url_for('leaderboard') }}" class="btn" style="text-decoration:none;display:inline-block;">Clear filter</a>
   {% endif %}
 </form>
 
-<table class="data-table">
+<div class="table-scroll">
+<table class="data-table" id="leaderboard-table">
   <thead>
     <tr>
       <th data-sort="num">#</th>
@@ -62,4 +67,5 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}How This Works — CFB Simulation Viewer{% endblock %}
+{% block content %}
+<h1>How This Works</h1>
+<p class="subtitle">
+  {{ meta.season_year }} season · {{ meta.sim_count }} simulated seasons ·
+  Last updated {{ meta.exported_at[:10] if meta.exported_at else '—' }}
+</p>
+
+<div class="card prose">
+  <h2>What are these simulations?</h2>
+  <p>
+    Each run models <strong>{{ meta.sim_count }} possible {{ meta.season_year }} seasons</strong>.
+    Every team gets a preseason <strong>Rating</strong> (from our forecast model). Each simulated season
+    draws slightly different ratings, simulates every scheduled game, then applies conference championship
+    and playoff rules to crown a national champion.
+  </p>
+</div>
+
+<div class="card prose">
+  <h2>Key metrics</h2>
+  <dl class="metric-list">
+    <dt>Rating</dt>
+    <dd>Preseason strength rating. Higher is better. The rating range shows a 90% confidence band for how that rating might vary across simulated seasons.</dd>
+    <dt>Conf Title Odds</dt>
+    <dd>Chance of winning the conference championship. Based on in-conference record, a conference title game between the top two teams, and a simulated title game using season ratings. <strong>FBS Independents</strong> have no conference and show <strong>--%</strong>.</dd>
+    <dt>Playoff Odds</dt>
+    <dd>Chance of making the 12-team College Football Playoff in a given simulated season.</dd>
+    <dt>Title Odds</dt>
+    <dd>Chance of winning the national championship after making the playoff field, using the official 12-team bracket format and season ratings for each matchup.</dd>
+    <dt>Avg Wins</dt>
+    <dd>Average regular-season wins across all {{ meta.sim_count }} simulations (before playoffs).</dd>
+  </dl>
+</div>
+
+<div class="card prose">
+  <h2>Conference championships</h2>
+  <ol>
+    <li>Each team’s <strong>conference win percentage</strong> is computed from simulated games against conference opponents only.</li>
+    <li>The <strong>top two</strong> teams by conference win % advance to the conference championship game.</li>
+    <li>Ties are broken by head-to-head results among tied teams, then by season rating.</li>
+    <li>The title game winner is decided by a simulated neutral-site game using each team’s rating that season.</li>
+  </ol>
+</div>
+
+<div class="card prose">
+  <h2>Playoff selection</h2>
+  <ul>
+    <li><strong>Four automatic bids</strong> go to the conference champion in the SEC, Big Ten, ACC, and Big 12.</li>
+    <li>Remaining spots are filled using win totals and ratings under our eligibility rules (including Group of 6 tiebreaks and Notre Dame’s independent rule).</li>
+    <li>The field is trimmed or filled to exactly <strong>12 teams</strong> per simulation.</li>
+  </ul>
+</div>
+
+<div class="card prose">
+  <h2>Playoff bracket</h2>
+  <p>Seeds 1–4 receive byes. First round: 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9. Quarterfinals pair each bye with a first-round winner. All playoff games are treated as neutral-site matchups based on season ratings.</p>
+  <p><a href="{{ url_for('bracket') }}">Explore brackets →</a></p>
+</div>
+{% endblock %}

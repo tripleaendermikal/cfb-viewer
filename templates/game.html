@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ game.away_team_name }} at {{ game.home_team_name }} — CFB Simulation Viewer{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('schedule') }}">← Schedule</a></p>
+<h1>{{ game.away_team_name }} at {{ game.home_team_name }}</h1>
+<p class="subtitle">
+  {{ game.game_date }}{% if game.week %} · Week {{ game.week }}{% endif %}
+  · {% if game.neutral_site %}Neutral site{% else %}Home site{% endif %}
+  {% if game.is_conference_game %}
+  · <span class="badge" style="background:{{ game.home_conference | conf_color }}">Conference game</span>
+  {% endif %}
+</p>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="stat-label">Home Win %</div>
+    <div class="stat-value">{{ game.home_win_pct }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Avg Margin (home)</div>
+    <div class="stat-value">
+      {% if game.avg_margin is not none %}{{ "%.1f"|format(game.avg_margin) }}{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card matchup-card">
+  <div class="matchup-side">
+    <h2 style="margin-top:0;font-size:1rem;">Home</h2>
+    <p style="font-size:1.25rem;font-weight:600;margin:0;">
+      <a href="{{ url_for('team_detail', team_id=game.home_team_id) }}">{{ game.home_team_name }}</a>
+    </p>
+    {% if game.home_conference %}
+    <span class="badge" style="background:{{ game.home_conference | conf_color }}">{{ game.home_conference }}</span>
+    {% endif %}
+    {% if game.home_fpi is not none %}
+    <p class="muted" style="margin:0.5rem 0 0;">Rating {{ "%.1f"|format(game.home_fpi) }}</p>
+    {% endif %}
+  </div>
+  <div class="matchup-vs">vs</div>
+  <div class="matchup-side">
+    <h2 style="margin-top:0;font-size:1rem;">Away</h2>
+    <p style="font-size:1.25rem;font-weight:600;margin:0;">
+      <a href="{{ url_for('team_detail', team_id=game.away_team_id) }}">{{ game.away_team_name }}</a>
+    </p>
+    {% if game.away_conference %}
+    <span class="badge" style="background:{{ game.away_conference | conf_color }}">{{ game.away_conference }}</span>
+    {% endif %}
+    {% if game.away_fpi is not none %}
+    <p class="muted" style="margin:0.5rem 0 0;">Rating {{ "%.1f"|format(game.away_fpi) }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<p><a href="{{ compare_url }}">Compare these teams →</a></p>
+{% endblock %}

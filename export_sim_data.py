@@ -41,6 +41,12 @@ def is_fbs_conference(conf: str) -> bool:
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(__file__).resolve().parent / "data"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from cfb_conf_championship import compute_conf_results_by_sim
+from cfb_playoff_odds import championship_odds_exact
+from cfb_playoff_odds_calc import load_sim_fpi_by_team
 
 SOURCES = {
     "champ_odds": ROOT / "cfb_2026_FBS_playoff_champ_odds_fpi_seed.csv",
@@ -504,6 +510,160 @@ def build_last_year() -> dict:
     }
 
 
+def build_games(schedule: list[dict], conf_by_id: dict[str, str]) -> dict[str, dict]:
+    """Per-game detail records keyed by game_id (home-team perspective)."""
+    by_id: dict[str, dict] = {}
+    for row in schedule:
+        gid = row.get("game_id", "")
+        if not gid:
+            continue
+        home_id = row.get("team_id", "")
+        away_id = row.get("opponent_id", "")
+        home_conf = conf_by_id.get(home_id, row.get("conference", ""))
+        away_conf = conf_by_id.get(away_id, "")
+        is_conf = (
+            bool(home_conf)
+            and bool(away_conf)
+            and home_conf == away_conf
+            and home_conf != FBS_INDEP
+        )
+        neutral = row.get("neutral_site")
+        by_id[gid] = {
+            "game_id": gid,
+            "game_date": row.get("game_date", ""),
+            "week": row.get("week"),
+            "neutral_site": neutral in ("True", True, "true"),
+            "home_team_id": home_id,
+            "home_team_name": row.get("team_name", ""),
+            "home_conference": home_conf,
+            "home_fpi": row.get("team_fpi"),
+            "away_team_id": away_id,
+            "away_team_name": row.get("opponent_name", ""),
+            "away_conference": away_conf,
+            "away_fpi": row.get("opponent_fpi"),
+            "home_win_pct": row.get("win_pct"),
+            "avg_margin": row.get("avg_margin"),
+            "is_conference_game": is_conf,
+        }
+    return by_id
+
+
+def build_conf_championship(
+    sim_cols: list[str],
+    id_to_name: dict[str, str],
+) -> dict:
+    """Per-sim conference champions/finalists and team CCG summary."""
+    results = compute_conf_results_by_sim(
+        SOURCES["games_sim"],
+        SOURCES["games_fpi"],
+        SOURCES["conferences"],
+    )
+    conf_names = sorted(
+        {
+            conf
+            for confs in results["champions"].values()
+            for conf in confs
+        }
+    )
+    champions_by_sim: list[dict[str, str]] = []
+    finalists_by_sim: list[dict[str, list[str]]] = []
+    for col in sim_cols:
+        champions_by_sim.append(dict(results["champions"].get(col, {})))
+        finals = results["finalists"].get(col, {})
+        finalists_by_sim.append({k: list(v) for k, v in finals.items()})
+
+    team_summary: dict[str, dict] = {}
+    for tid, appearances in results["appearances"].items():
+        team_summary[tid] = {
+            "ccg_appearances": appearances,
+            "ccg_wins": results["champ_wins"].get(tid, 0),
+            "team_name": id_to_name.get(tid, tid),
+        }
+
+    return {
+        "sim_count": len(sim_cols),
+        "conferences": conf_names,
+        "champions_by_sim": champions_by_sim,
+        "finalists_by_sim": finalists_by_sim,
+        "team_summary": team_summary,
+    }
+
+
+def build_brackets(
+    eligibility: dict,
+    sim_cols: list[str],
+    name_to_id: dict[str, str],
+    id_to_name: dict[str, str],
+    leaderboard: list[dict],
+) -> dict:
+    """Per-sim playoff seeds/brackets and team-centric summary."""
+    sim_fpi_by_col = load_sim_fpi_by_team(SOURCES["games_fpi"])
+    title_odds = {r["team_id"]: r.get("title_odds_pct", 0) for r in leaderboard if r.get("team_id")}
+    fields = eligibility.get("fields", [])
+    by_sim: list[dict] = []
+    seed_hist: dict[str, Counter] = {}
+    seed_sums: dict[str, float] = {}
+    seed_counts: dict[str, int] = {}
+    r1_seeds = [[5, 12], [6, 11], [7, 10], [8, 9]]
+
+    for sim_idx, col in enumerate(sim_cols):
+        field_ids = fields[sim_idx] if sim_idx < len(fields) else []
+        fpi_by_name = sim_fpi_by_col.get(col, {})
+        rated: list[tuple[str, float]] = []
+        for tid in field_ids:
+            name = id_to_name.get(tid, "")
+            if name in fpi_by_name:
+                rated.append((tid, fpi_by_name[name]))
+        rated.sort(key=lambda x: (-x[1], x[0]))
+        seeds = [
+            {
+                "team_id": tid,
+                "team_name": id_to_name.get(tid, tid),
+                "seed": i + 1,
+                "fpi": round(fpi, 2),
+            }
+            for i, (tid, fpi) in enumerate(rated[:12])
+        ]
+        for s in seeds:
+            tid = s["team_id"]
+            seed_hist.setdefault(tid, Counter())[str(s["seed"])] += 1
+            seed_sums[tid] = seed_sums.get(tid, 0) + s["seed"]
+            seed_counts[tid] = seed_counts.get(tid, 0) + 1
+
+        title_by_team: dict[str, float] = {}
+        if len(seeds) == 12:
+            ratings = [0.0] * 12
+            for s in seeds:
+                ratings[s["seed"] - 1] = s["fpi"]
+            odds = championship_odds_exact(ratings)
+            for s in seeds:
+                title_by_team[s["team_id"]] = round(odds[s["seed"] - 1] * 100, 2)
+
+        by_sim.append({
+            "seeds": seeds,
+            "r1": r1_seeds,
+            "title_odds_by_team_id": title_by_team,
+        })
+
+    team_summary: dict[str, dict] = {}
+    for tid, hist in seed_hist.items():
+        n = seed_counts[tid]
+        team_summary[tid] = {
+            "team_name": id_to_name.get(tid, tid),
+            "avg_seed": round(seed_sums[tid] / n, 2) if n else None,
+            "seed_histogram": dict(sorted(hist.items(), key=lambda x: int(x[0]))),
+            "title_odds_pct": title_odds.get(tid, 0),
+            "field_appearances": n,
+        }
+
+    return {
+        "sim_count": len(sim_cols),
+        "by_sim": by_sim,
+        "team_summary": team_summary,
+        "r1_pairings": r1_seeds,
+    }
+
+
 def main() -> int:
     for key, path in SOURCES.items():
         if not path.is_file():
@@ -545,6 +705,9 @@ def main() -> int:
     margin_map = load_avg_margins(SOURCES["games_fpi"], sim_cols)
     schedule = build_schedule(game_rows, sim_cols, margin_map, conf_by_id)
     conferences = build_conferences(teams, leaderboard, eligibility["fields"], n_sims)
+    games = build_games(schedule, conf_by_id)
+    conf_championship = build_conf_championship(sim_cols, id_to_name)
+    brackets = build_brackets(eligibility, sim_cols, name_to_id, id_to_name, leaderboard)
 
     season_year = 2026
     if game_rows and game_rows[0].get("season_year"):
@@ -573,6 +736,9 @@ def main() -> int:
         ("field_analysis.json", field_analysis),
         ("schedule.json", schedule),
         ("conferences.json", conferences),
+        ("games.json", games),
+        ("conf_championship.json", conf_championship),
+        ("brackets.json", brackets),
         ("last_year.json", build_last_year()),
     ]:
         sizes[name] = write_json(DATA_DIR / name, payload)

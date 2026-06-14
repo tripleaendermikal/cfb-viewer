@@ -6,6 +6,10 @@
 
 <form class="filters" method="get">
   <label>
+    Search
+    <input type="search" id="schedule-search" placeholder="Filter matchups…">
+  </label>
+  <label>
     Team
     <select name="team">
       <option value="">All teams</option>
@@ -40,7 +44,8 @@
 
 <p class="muted">{{ games|length }} games shown</p>
 
-<table class="data-table">
+<div class="table-scroll">
+<table class="data-table schedule-table" id="schedule-table">
   <thead>
     <tr>
       <th data-sort="text">Date</th>
@@ -54,14 +59,14 @@
   </thead>
   <tbody>
     {% for g in games %}
-    <tr>
+    <tr class="schedule-row" onclick="window.location='{{ url_for('game_detail', game_id=g.game_id) }}'">
       <td data-value="{{ g.game_date }}">{{ g.game_date }}</td>
       <td class="num" data-value="{{ g.week }}">{{ g.week }}</td>
       <td data-value="{{ g.team_name }}">
-        <a href="{{ url_for('team_detail', team_id=g.team_id) }}">{{ g.team_name }}</a>
+        <a href="{{ url_for('team_detail', team_id=g.team_id) }}" onclick="event.stopPropagation()">{{ g.team_name }}</a>
       </td>
       <td data-value="{{ g.opponent_name }}">
-        <a href="{{ url_for('team_detail', team_id=g.opponent_id) }}">{{ g.opponent_name }}</a>
+        <a href="{{ url_for('team_detail', team_id=g.opponent_id) }}" onclick="event.stopPropagation()">{{ g.opponent_name }}</a>
       </td>
       <td data-value="{% if g.neutral_site == 'True' or g.neutral_site == True %}neutral{% else %}home{% endif %}">
         {% if g.neutral_site == 'True' or g.neutral_site == True %}neutral{% else %}home{% endif %}
@@ -74,4 +79,5 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

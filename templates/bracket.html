@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Playoff Bracket — CFB Simulation Viewer{% endblock %}
+{% block content %}
+<h1>Playoff Bracket</h1>
+<p class="subtitle">12-team bracket by simulation or team-centric seed history</p>
+
+<div class="tab-bar">
+  <a href="{{ url_for('bracket') }}#sim-tab" class="tab-link">By simulation</a>
+  <a href="{{ url_for('bracket') }}#team-tab" class="tab-link">By team</a>
+</div>
+
+<div class="card" id="sim-tab">
+  <h2 style="margin-top:0;font-size:1.1rem;">Simulation lookup</h2>
+  <form class="filters" method="get">
+  {% if team_filter %}<input type="hidden" name="team" value="{{ team_filter }}">{% endif %}
+    <label>
+      Simulation (1–{{ meta.sim_count }})
+      <input type="number" name="sim" min="1" max="{{ meta.sim_count }}" value="{{ sim_index or '' }}" placeholder="e.g. 50">
+    </label>
+    <button type="submit" class="btn">Show bracket</button>
+  </form>
+  {% if sim_error %}
+  <p class="error">{{ sim_error }}</p>
+  {% elif sim_bracket %}
+  <p><strong>Sim {{ sim_index }}</strong> · <a href="{{ url_for('fields', sim=sim_index) }}">View playoff field</a></p>
+
+  <div class="bracket-layout">
+    <div class="bracket-section">
+      <h3>Seeds 1–4 (byes)</h3>
+      <ul class="bracket-seed-list">
+        {% for s in sim_bracket.seeds if s.seed <= 4 %}
+        <li>
+          <span class="seed-num">{{ s.seed }}</span>
+          <a href="{{ url_for('team_detail', team_id=s.team_id) }}">{{ s.team_name }}</a>
+          <span class="muted">FPI {{ s.fpi }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="bracket-section">
+      <h3>First round</h3>
+      <ul class="bracket-match-list">
+        {% for pair in sim_bracket.r1 %}
+        {% set hi = sim_bracket.seeds | selectattr('seed', 'equalto', pair[0]) | first %}
+        {% set lo = sim_bracket.seeds | selectattr('seed', 'equalto', pair[1]) | first %}
+        <li>
+          <span class="seed-num">{{ pair[0] }}</span>
+          {% if hi %}<a href="{{ url_for('team_detail', team_id=hi.team_id) }}">{{ hi.team_name }}</a>{% else %}—{% endif %}
+          <span class="vs">vs</span>
+          <span class="seed-num">{{ pair[1] }}</span>
+          {% if lo %}<a href="{{ url_for('team_detail', team_id=lo.team_id) }}">{{ lo.team_name }}</a>{% else %}—{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="bracket-section">
+      <h3>All seeds</h3>
+      <table class="data-table compact-table">
+        <thead>
+          <tr><th>Seed</th><th>Team</th><th>FPI</th><th>Title % (this sim)</th></tr>
+        </thead>
+        <tbody>
+          {% for s in sim_bracket.seeds %}
+          <tr>
+            <td class="num">{{ s.seed }}</td>
+            <td><a href="{{ url_for('team_detail', team_id=s.team_id) }}">{{ s.team_name }}</a></td>
+            <td class="num">{{ s.fpi }}</td>
+            <td class="num">
+              {% set to = sim_bracket.title_odds_by_team_id.get(s.team_id) %}
+              {% if to is not none %}{{ to }}%{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" id="team-tab">
+  <h2 style="margin-top:0;font-size:1.1rem;">Team bracket history</h2>
+  <form class="filters" method="get">
+  {% if sim_index %}<input type="hidden" name="sim" value="{{ sim_index }}">{% endif %}
+    <label>
+      Team
+      <select name="team">
+        <option value="">Select team…</option>
+        {% for t in team_options %}
+        <option value="{{ t.team_id }}" {% if t.team_id == team_filter %}selected{% endif %}>{{ t.team_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="btn">Show</button>
+  </form>
+  {% if team_bracket %}
+  <div class="card-grid">
+    <div class="card">
+      <div class="stat-label">Title Odds</div>
+      <div class="stat-value">{{ team_bracket.title_odds_pct }}%</div>
+    </div>
+    {% if team_bracket.avg_seed is not none %}
+    <div class="card">
+      <div class="stat-label">Avg Seed (when in)</div>
+      <div class="stat-value">{{ team_bracket.avg_seed }}</div>
+    </div>
+    {% endif %}
+    {% if team_bracket.field_appearances %}
+    <div class="card">
+      <div class="stat-label">Field Appearances</div>
+      <div class="stat-value">{{ team_bracket.field_appearances }}</div>
+    </div>
+    {% endif %}
+  </div>
+  {% if team_bracket.seed_histogram %}
+  <h3>Seed distribution</h3>
+  <table class="data-table compact-table">
+    <thead><tr><th>Seed</th><th>Count</th></tr></thead>
+    <tbody>
+      {% for seed, count in team_bracket.seed_histogram.items() %}
+      <tr>
+        <td class="num">{{ seed }}</td>
+        <td class="num">{{ count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -10,12 +10,22 @@
 <body>
   <header class="navbar">
     <a class="brand" href="{{ url_for('leaderboard') }}">CFB {{ meta.season_year }} Sims</a>
+    <form class="team-search-form" id="global-team-search" autocomplete="off">
+      <input type="search" id="team-search-input" list="team-search-list" placeholder="Find team…" aria-label="Find team">
+      <datalist id="team-search-list">
+        {% for t in team_search %}
+        <option value="{{ t.name }}" data-id="{{ t.id }}"></option>
+        {% endfor %}
+      </datalist>
+    </form>
     <nav>
       <a href="{{ url_for('leaderboard') }}" class="{% if active == 'leaderboard' %}active{% endif %}">Leaderboard</a>
       <a href="{{ url_for('compare') }}" class="{% if active == 'compare' %}active{% endif %}">Compare</a>
       <a href="{{ url_for('fields') }}" class="{% if active == 'fields' %}active{% endif %}">Playoff Fields</a>
+      <a href="{{ url_for('bracket') }}" class="{% if active == 'bracket' %}active{% endif %}">Bracket</a>
       <a href="{{ url_for('schedule') }}" class="{% if active == 'schedule' %}active{% endif %}">Schedule</a>
       <a href="{{ url_for('conferences') }}" class="{% if active == 'conferences' %}active{% endif %}">Conferences</a>
+      <a href="{{ url_for('methodology') }}" class="{% if active == 'methodology' %}active{% endif %}">How it works</a>
       <a href="{{ url_for('last_year') }}" class="{% if active == 'last_year' %}active{% endif %}">Last Year</a>
     </nav>
     <div class="meta">{{ meta.sim_count }} sims · {{ meta.team_count }} teams</div>
@@ -24,6 +34,24 @@
     {% block content %}{% endblock %}
   </main>
   <script>
+    (function() {
+      var teamMap = {};
+      {% for t in team_search %}
+      teamMap[{{ t.name | tojson }}] = {{ t.id | tojson }};
+      {% endfor %}
+      var form = document.getElementById('global-team-search');
+      var input = document.getElementById('team-search-input');
+      if (form && input) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          var name = input.value.trim();
+          if (teamMap[name]) {
+            window.location.href = '/team/' + teamMap[name];
+          }
+        });
+      }
+    })();
+
     document.querySelectorAll('table.data-table').forEach(function(table) {
       var headers = table.querySelectorAll('th[data-sort]');
       headers.forEach(function(th, colIdx) {
@@ -48,6 +76,21 @@
         });
       });
     });
+
+    function filterTableRows(inputId, tableSelector) {
+      var input = document.getElementById(inputId);
+      var table = document.querySelector(tableSelector);
+      if (!input || !table) return;
+      input.addEventListener('input', function() {
+        var q = input.value.trim().toLowerCase();
+        table.querySelectorAll('tbody tr').forEach(function(row) {
+          var text = row.textContent.toLowerCase();
+          row.style.display = !q || text.indexOf(q) !== -1 ? '' : 'none';
+        });
+      });
+    }
+    filterTableRows('leaderboard-search', '#leaderboard-table');
+    filterTableRows('schedule-search', '#schedule-table');
   </script>
   {% block scripts %}{% endblock %}
 </body>

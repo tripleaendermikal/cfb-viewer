@@ -33,6 +33,7 @@
       <th data-sort="text">Team</th>
       <th data-sort="num">Avg Wins</th>
       <th data-sort="num">Conf Title %</th>
+      <th data-sort="num">CCG Apps</th>
       <th data-sort="num">Title Odds</th>
       <th data-sort="num">Playoff Odds</th>
     </tr>
@@ -45,6 +46,7 @@
       </td>
       <td class="num" data-value="{{ t.avg_wins }}">{{ "%.2f"|format(t.avg_wins) }}</td>
       <td class="num" data-value="{{ t.conf_champ_odds_pct }}">{{ t.conf_champ_odds_pct }}%</td>
+      <td class="num" data-value="{{ t.conf_champ_appearances }}">{{ t.conf_champ_appearances }}</td>
       <td class="num" data-value="{{ t.title_odds_pct }}">{{ t.title_odds_pct }}%</td>
       <td class="num" data-value="{{ t.eligibility_pct }}">{{ t.eligibility_pct }}%</td>
     </tr>
