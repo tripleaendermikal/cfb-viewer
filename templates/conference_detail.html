@@ -14,6 +14,12 @@
     <div class="stat-value">{{ conf.total_title_odds_pct }}%</div>
   </div>
   <div class="card">
+    <div class="stat-label">Conf Favorite</div>
+    <div class="stat-value" style="font-size:1.1rem;">
+      {{ conf.conf_favorite_name }} ({{ conf.conf_favorite_odds_pct }}%)
+    </div>
+  </div>
+  <div class="card">
     <div class="stat-label">Playoff Appearances</div>
     <div class="stat-value">{{ conf.total_playoff_appearances }}</div>
   </div>
@@ -28,6 +34,7 @@
     <tr>
       <th data-sort="text">Team</th>
       <th data-sort="num">Avg Wins</th>
+      <th data-sort="num">Conf Title %</th>
       <th data-sort="num">Title Odds</th>
       <th data-sort="num">Elig %</th>
       <th data-sort="num">Playoff Apps</th>
@@ -40,6 +47,7 @@
         <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
       </td>
       <td class="num" data-value="{{ t.avg_wins }}">{{ "%.2f"|format(t.avg_wins) }}</td>
+      <td class="num" data-value="{{ t.conf_champ_odds_pct }}">{{ t.conf_champ_odds_pct }}%</td>
       <td class="num" data-value="{{ t.title_odds_pct }}">{{ t.title_odds_pct }}%</td>
       <td class="num" data-value="{{ t.eligibility_pct }}">{{ t.eligibility_pct }}%</td>
       <td class="num" data-value="{{ t.playoff_appearances }}">{{ t.playoff_appearances }}</td>

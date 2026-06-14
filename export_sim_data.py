@@ -43,6 +43,7 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 
 SOURCES = {
     "champ_odds": ROOT / "cfb_2026_FBS_playoff_champ_odds_fpi_seed.csv",
+    "conf_champ_odds": ROOT / "cfb_2026_FBS_conf_champ_odds.csv",
     "elig_pct": ROOT / "cfb_2026_FBS_playoff_elig_pct.csv",
     "elig": ROOT / "cfb_2026_FBS_playoff_elig_v2.csv",
     "records": ROOT / "cfb_2026_fbs_team_sim_records_v2.csv",
@@ -94,6 +95,21 @@ def build_teams(records_rows: list[dict], sim_cols: list[str]) -> list[dict]:
             }
         )
     return teams
+
+
+def merge_conf_champ_odds(leaderboard: list[dict], conf_champ_rows: list[dict]) -> None:
+    by_name = {r["team_name"]: r for r in conf_champ_rows}
+    by_id = {r["team_id"]: r for r in conf_champ_rows}
+    for row in leaderboard:
+        src = by_id.get(row.get("team_id") or "") or by_name.get(row["team_name"])
+        if src:
+            row["conf_champ_odds_pct"] = float(src["conf_champ_odds_pct"])
+            row["conf_champ_appearances"] = int(src["conf_champ_appearances"])
+            row["conf_champ_game_win_pct"] = float(src.get("conf_champ_game_win_pct", 0))
+        else:
+            row["conf_champ_odds_pct"] = 0.0
+            row["conf_champ_appearances"] = 0
+            row["conf_champ_game_win_pct"] = 0.0
 
 
 def build_leaderboard(champ_rows: list[dict], elig_pct_rows: list[dict]) -> list[dict]:
@@ -358,12 +374,23 @@ def build_conferences(teams: list[dict], leaderboard: list[dict], fields: list[l
         conf_fields_with_member = sum(1 for field in fields if any(tid in team_ids for tid in field))
         playoff_apps = sum(lb_by_id.get(m["team_id"], {}).get("playoff_appearances", 0) for m in members)
         title_sum = sum(lb_by_id.get(m["team_id"], {}).get("title_odds_pct", 0) for m in members)
+        conf_champ_sum = sum(
+            lb_by_id.get(m["team_id"], {}).get("conf_champ_odds_pct", 0) for m in members
+        )
+        conf_favorite = max(
+            members,
+            key=lambda m: lb_by_id.get(m["team_id"], {}).get("conf_champ_odds_pct", 0),
+        )
+        fav_lb = lb_by_id.get(conf_favorite["team_id"], {})
         out.append(
             {
                 "conference": conf,
                 "team_count": len(members),
                 "is_group_of_6": conf in GROUP_OF_6,
                 "total_title_odds_pct": round(title_sum, 2),
+                "total_conf_champ_odds_pct": round(conf_champ_sum, 2),
+                "conf_favorite_name": conf_favorite["team_name"],
+                "conf_favorite_odds_pct": fav_lb.get("conf_champ_odds_pct", 0),
                 "total_playoff_appearances": playoff_apps,
                 "sims_with_member": conf_fields_with_member,
                 "sims_with_member_pct": round(conf_fields_with_member / n_sims * 100, 2) if n_sims else 0,
@@ -374,12 +401,18 @@ def build_conferences(teams: list[dict], leaderboard: list[dict], fields: list[l
                             "team_name": m["team_name"],
                             "avg_wins": m["avg_wins"],
                             "title_odds_pct": lb_by_id.get(m["team_id"], {}).get("title_odds_pct", 0),
+                            "conf_champ_odds_pct": lb_by_id.get(m["team_id"], {}).get(
+                                "conf_champ_odds_pct", 0
+                            ),
+                            "conf_champ_appearances": lb_by_id.get(m["team_id"], {}).get(
+                                "conf_champ_appearances", 0
+                            ),
                             "eligibility_pct": lb_by_id.get(m["team_id"], {}).get("eligibility_pct", 0),
                             "playoff_appearances": lb_by_id.get(m["team_id"], {}).get("playoff_appearances", 0),
                         }
                         for m in members
                     ],
-                    key=lambda x: -x["title_odds_pct"],
+                    key=lambda x: -x["conf_champ_odds_pct"],
                 ),
             }
         )
@@ -480,8 +513,10 @@ def main() -> int:
 
     _, champ_rows = read_csv(SOURCES["champ_odds"])
     _, elig_pct_rows = read_csv(SOURCES["elig_pct"])
+    _, conf_champ_rows = read_csv(SOURCES["conf_champ_odds"])
     leaderboard = build_leaderboard(champ_rows, elig_pct_rows)
     merge_team_ids(leaderboard, teams)
+    merge_conf_champ_odds(leaderboard, conf_champ_rows)
     conf_by_id = {t["team_id"]: t["conference"] for t in teams}
     _, games_fpi_rows = read_csv(SOURCES["games_fpi"])
     baseline_by_id = build_baseline_fpi(games_fpi_rows)
