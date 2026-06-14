@@ -60,6 +60,211 @@ FCS_CONFERENCES = {
 def is_fbs_conference(conf: str) -> bool:
     return bool(conf) and conf not in FCS_CONFERENCES and conf != "Unknown"
 
+
+def is_fbs_team(team: dict) -> bool:
+    return is_fbs_conference(team.get("conference", ""))
+
+
+def summary_word_count(text: str) -> int:
+    return len(text.split())
+
+
+def truncate_summary(text: str, max_words: int = 100) -> str:
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    trimmed = " ".join(words[:max_words]).rstrip(".,;")
+    return f"{trimmed}."
+
+
+def classify_team_tier(title_odds: float, eligibility: float, avg_wins: float) -> str:
+    if title_odds >= 5:
+        return "national title contender"
+    if title_odds >= 2:
+        return "title threat"
+    if eligibility >= 40:
+        return "playoff regular"
+    if eligibility >= 20:
+        return "fringe playoff team"
+    if eligibility >= 8:
+        return "occasional playoff candidate"
+    if avg_wins >= 8:
+        return "winning program"
+    if avg_wins >= 6:
+        return "middle-of-the-pack team"
+    if avg_wins >= 4:
+        return "rebuilding squad"
+    return "long-shot program"
+
+
+def short_opponent_name(full: str) -> str:
+    tokens = full.split()
+    if len(tokens) <= 2:
+        return full
+    return " ".join(tokens[:-1])
+
+
+def team_schedule_from_games(games: dict[str, dict], team_id: str) -> list[dict]:
+    tid = str(team_id)
+    rows: list[dict] = []
+    for game in games.values():
+        home_wp = game.get("home_win_pct")
+        if home_wp is None:
+            continue
+        try:
+            home_wp_f = float(home_wp)
+        except (TypeError, ValueError):
+            continue
+        neutral = bool(game.get("neutral_site"))
+        if game.get("home_team_id") == tid:
+            rows.append(
+                {
+                    "opponent_name": game.get("away_team_name", ""),
+                    "win_pct": home_wp_f,
+                    "home_away": "neutral" if neutral else "home",
+                }
+            )
+        elif game.get("away_team_id") == tid:
+            rows.append(
+                {
+                    "opponent_name": game.get("home_team_name", ""),
+                    "win_pct": round(100 - home_wp_f, 1),
+                    "home_away": "neutral" if neutral else "away",
+                }
+            )
+    return rows
+
+
+def format_swing_game(game: dict) -> str:
+    site = "vs" if game["home_away"] == "home" else ("@" if game["home_away"] == "away" else "n")
+    opp = short_opponent_name(game["opponent_name"])
+    wp = game["win_pct"]
+    wp_str = str(int(wp)) if wp == int(wp) else f"{wp:.1f}".rstrip("0").rstrip(".")
+    return f"{site} {opp} ({wp_str}%)"
+
+
+def conference_context(
+    team_id: str, conferences: list[dict]
+) -> tuple[int, int, str | None, float | None]:
+    for conf in conferences:
+        members = conf.get("teams", [])
+        for rank, member in enumerate(members, start=1):
+            if member.get("team_id") == team_id:
+                return (
+                    rank,
+                    len(members),
+                    conf.get("conf_favorite_name"),
+                    member.get("conf_champ_odds_pct"),
+                )
+    return 0, 0, None, None
+
+
+def tier_article(tier: str) -> str:
+    return "an" if tier[:1].lower() in "aeiou" else "a"
+
+
+def build_team_summary_text(
+    team_name: str,
+    conference: str,
+    season_year: int,
+    sim_count: int,
+    avg_wins: float,
+    title_odds: float,
+    eligibility: float,
+    conf_champ_odds: float,
+    conf_rank: int,
+    conf_size: int,
+    conf_favorite: str | None,
+    swing_games: list[dict],
+) -> str:
+    tier = classify_team_tier(title_odds, eligibility, avg_wins)
+    opener = f"The {team_name} are {tier_article(tier)} {tier} in the {season_year} preseason model."
+
+    if conference == FBS_INDEP:
+        conf_sentence = f"They compete as an FBS independent."
+    elif conf_rank == 1 and conf_favorite:
+        conf_sentence = (
+            f"They are the {conference} favorite at {conf_champ_odds:.1f}% conference title odds."
+        )
+    elif conf_rank > 0:
+        conf_sentence = (
+            f"In the {conference}, they rank #{conf_rank} of {conf_size} "
+            f"by conference title odds ({conf_champ_odds:.1f}%)."
+        )
+    else:
+        conf_sentence = f"They compete in the {conference}."
+
+    stats_sentence = (
+        f"Across {sim_count} simulations, they average {avg_wins:.2f} wins with "
+        f"{eligibility:.1f}% playoff odds and {title_odds:.2f}% national title odds."
+    )
+
+    parts = [opener, conf_sentence, stats_sentence]
+    swing_labels = [format_swing_game(g) for g in swing_games]
+    while swing_labels:
+        swing_sentence = f"Pivot games: {', '.join(swing_labels)}."
+        candidate = " ".join([*parts, swing_sentence])
+        if summary_word_count(candidate) <= 100:
+            return candidate
+        swing_labels = swing_labels[:-1]
+
+    return truncate_summary(" ".join(parts), 100)
+
+
+def build_team_summaries(
+    teams: list[dict],
+    leaderboard: list[dict],
+    conferences: list[dict],
+    games: dict[str, dict],
+    sim_count: int,
+    season_year: int,
+) -> dict:
+    lb_by_id = {r["team_id"]: r for r in leaderboard if r.get("team_id")}
+    summaries: dict[str, dict] = {}
+
+    for team in teams:
+        if not is_fbs_team(team):
+            continue
+        tid = team["team_id"]
+        lb = lb_by_id.get(tid, {})
+        avg_wins = float(team.get("avg_wins") or lb.get("avg_wins") or 0)
+        title_odds = float(lb.get("title_odds_pct") or 0)
+        eligibility = float(lb.get("eligibility_pct") or 0)
+        conf_champ_odds = float(lb.get("conf_champ_odds_pct") or 0)
+        conf_rank, conf_size, conf_favorite, _ = conference_context(tid, conferences)
+
+        schedule = team_schedule_from_games(games, tid)
+        schedule.sort(key=lambda g: abs(g["win_pct"] - 50))
+        swing_games = schedule[:3]
+
+        summary = build_team_summary_text(
+            team_name=team["team_name"],
+            conference=team.get("conference", ""),
+            season_year=season_year,
+            sim_count=sim_count,
+            avg_wins=avg_wins,
+            title_odds=title_odds,
+            eligibility=eligibility,
+            conf_champ_odds=conf_champ_odds,
+            conf_rank=conf_rank,
+            conf_size=conf_size,
+            conf_favorite=conf_favorite,
+            swing_games=swing_games,
+        )
+
+        summaries[tid] = {
+            "team_id": tid,
+            "team_name": team["team_name"],
+            "word_count": summary_word_count(summary),
+            "summary": summary,
+        }
+
+    return {
+        "sim_count": sim_count,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "summaries": summaries,
+    }
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(__file__).resolve().parent / "data"
 if str(ROOT) not in sys.path:
@@ -984,6 +1189,22 @@ def main() -> int:
         schedule,
     )
 
+    season_year = 2026
+    if game_rows and game_rows[0].get("season_year"):
+        try:
+            season_year = int(game_rows[0]["season_year"])
+        except ValueError:
+            pass
+
+    team_summaries = build_team_summaries(
+        teams,
+        leaderboard,
+        conferences,
+        games,
+        n_sims,
+        season_year,
+    )
+
     brackets_summary = {
         "sim_count": n_sims,
         "r1_pairings": brackets["r1_pairings"],
@@ -995,13 +1216,6 @@ def main() -> int:
         "team_summary": conf_championship["team_summary"],
     }
     eligibility_slim = {"sim_count": n_sims}
-
-    season_year = 2026
-    if game_rows and game_rows[0].get("season_year"):
-        try:
-            season_year = int(game_rows[0]["season_year"])
-        except ValueError:
-            pass
 
     meta = {
         "season_year": season_year,
@@ -1028,6 +1242,7 @@ def main() -> int:
         ("game_slugs.json", game_slugs),
         ("brackets_summary.json", brackets_summary),
         ("conf_championship_summary.json", conf_championship_summary),
+        ("team_summaries.json", team_summaries),
         ("last_year.json", build_last_year()),
     ]:
         sizes[name] = write_json(DATA_DIR / name, payload)

@@ -450,6 +450,17 @@ table.data-table.compact-table { font-size: 0.85rem; }
   opacity: 0.85;
 }
 
+.team-summary-card {
+  margin-bottom: 1rem;
+}
+
+.team-summary {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
 .team-page .card {
   border-top: 3px solid var(--team-primary);
 }

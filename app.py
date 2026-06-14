@@ -155,6 +155,7 @@ class DataStore:
         self._brackets_summary: dict | None = None
         self._conf_championship_summary: dict | None = None
         self._conference_deep: dict | None = None
+        self._team_summaries: dict | None = None
         self._legacy_brackets: dict | None = None
         self._legacy_conf_championship: dict | None = None
         self._legacy_eligibility_fields: list | None = None
@@ -244,6 +245,13 @@ class DataStore:
             data = self._load_optional(self._data_dir / "conference_deep.json")
             self._conference_deep = data if isinstance(data, dict) else {}
         return self._conference_deep
+
+    @property
+    def team_summaries(self) -> dict:
+        if self._team_summaries is None:
+            data = self._load_optional(self._data_dir / "team_summaries.json")
+            self._team_summaries = data if isinstance(data, dict) else {}
+        return self._team_summaries
 
     def _legacy_brackets_data(self) -> dict:
         if self._legacy_brackets is None:
@@ -590,10 +598,13 @@ def create_app() -> Flask:
         team_theme = build_team_theme(team, conference)
         hist_labels = [str(i) for i in range(13)]
         hist_data = [merged["win_histogram"].get(str(i), 0) for i in range(13)]
+        summary_entry = store.team_summaries.get("summaries", {}).get(team_id, {})
+        team_summary = summary_entry.get("summary")
         return render_template(
             "team.html",
             team=merged,
             team_theme=team_theme,
+            team_summary=team_summary,
             bracket_summary=bracket_summary,
             team_schedule=team_schedule,
             hist_labels=hist_labels,

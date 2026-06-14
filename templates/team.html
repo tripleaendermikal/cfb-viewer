@@ -28,6 +28,12 @@
     </p>
   </header>
 
+{% if team_summary %}
+<div class="card team-summary-card">
+  <p class="team-summary">{{ team_summary }}</p>
+</div>
+{% endif %}
+
 <div class="card-grid">
   <div class="card">
     <div class="stat-label">Title Odds</div>
