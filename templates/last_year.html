@@ -27,8 +27,9 @@
 </form>
 
 <h2>Team Margins</h2>
-<p class="muted">{{ teams|length }} teams shown · expected point margin vs median FBS team</p>
+<p class="muted">{{ teams|length }} teams shown · expected point margin vs median FBS team · <a href="{{ url_for('leaderboard') }}">2026 projections</a></p>
 
+<div class="table-scroll">
 <table class="data-table">
   <thead>
     <tr>
@@ -42,7 +43,9 @@
     {% for row in teams %}
     <tr>
       <td class="num" data-value="{{ loop.index }}">{{ loop.index }}</td>
-      <td data-value="{{ row.team_name }}">{{ row.team_name }}</td>
+      <td data-value="{{ row.team_name }}">
+        <a href="{{ url_for('team_detail', team_id=row.team_id) }}">{{ row.team_name }}</a>
+      </td>
       <td data-value="{{ row.conference }}">
         {% if row.conference %}
         <span class="badge" style="background:{{ row.conference | conf_color }}">{{ row.conference }}</span>
@@ -55,10 +58,12 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 
 <h2>Games</h2>
 <p class="muted">{{ games|length }} games shown</p>
 
+<div class="table-scroll">
 <table class="data-table">
   <thead>
     <tr>
@@ -78,10 +83,14 @@
     <tr>
       <td data-value="{{ g.game_date }}">{{ g.game_date }}</td>
       <td class="num" data-value="{{ g.week }}">{{ g.week }}</td>
-      <td data-value="{{ g.away_team }}">{{ g.away_team }}</td>
+      <td data-value="{{ g.away_team }}">
+        <a href="{{ url_for('team_detail', team_id=g.away_team_id) }}">{{ g.away_team }}</a>
+      </td>
       <td class="num" data-value="{{ g.away_points }}">{{ g.away_points }}</td>
       <td class="num" data-value="{{ g.away_yards }}">{{ g.away_yards }}</td>
-      <td data-value="{{ g.home_team }}">{{ g.home_team }}</td>
+      <td data-value="{{ g.home_team }}">
+        <a href="{{ url_for('team_detail', team_id=g.home_team_id) }}">{{ g.home_team }}</a>
+      </td>
       <td class="num" data-value="{{ g.home_points }}">{{ g.home_points }}</td>
       <td class="num" data-value="{{ g.home_yards }}">{{ g.home_yards }}</td>
       <td data-value="{% if g.neutral_site %}neutral{% else %}home{% endif %}">
@@ -91,5 +100,6 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endif %}
 {% endblock %}

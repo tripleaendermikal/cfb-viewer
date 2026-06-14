@@ -664,6 +664,29 @@ def build_brackets(
     }
 
 
+def write_sim_files(
+    data_dir: Path,
+    sim_count: int,
+    fields: list[list[str]],
+    brackets_by_sim: list[dict],
+    champions_by_sim: list[dict[str, str]],
+    finalists_by_sim: list[dict[str, list[str]]],
+) -> int:
+    """Write per-sim JSON files; return total bytes written."""
+    sim_dir = data_dir / "sim"
+    sim_dir.mkdir(parents=True, exist_ok=True)
+    total = 0
+    for sim_idx in range(sim_count):
+        payload = {
+            "field": fields[sim_idx] if sim_idx < len(fields) else [],
+            "bracket": brackets_by_sim[sim_idx] if sim_idx < len(brackets_by_sim) else {},
+            "conf_champions": champions_by_sim[sim_idx] if sim_idx < len(champions_by_sim) else {},
+            "conf_finalists": finalists_by_sim[sim_idx] if sim_idx < len(finalists_by_sim) else {},
+        }
+        total += write_json(sim_dir / f"{sim_idx + 1:04d}.json", payload)
+    return total
+
+
 def main() -> int:
     for key, path in SOURCES.items():
         if not path.is_file():
@@ -709,6 +732,18 @@ def main() -> int:
     conf_championship = build_conf_championship(sim_cols, id_to_name)
     brackets = build_brackets(eligibility, sim_cols, name_to_id, id_to_name, leaderboard)
 
+    brackets_summary = {
+        "sim_count": n_sims,
+        "r1_pairings": brackets["r1_pairings"],
+        "team_summary": brackets["team_summary"],
+    }
+    conf_championship_summary = {
+        "sim_count": conf_championship["sim_count"],
+        "conferences": conf_championship["conferences"],
+        "team_summary": conf_championship["team_summary"],
+    }
+    eligibility_slim = {"sim_count": n_sims}
+
     season_year = 2026
     if game_rows and game_rows[0].get("season_year"):
         try:
@@ -732,16 +767,26 @@ def main() -> int:
         ("meta.json", meta),
         ("leaderboard.json", leaderboard),
         ("teams.json", teams),
-        ("eligibility.json", eligibility),
+        ("eligibility.json", eligibility_slim),
         ("field_analysis.json", field_analysis),
         ("schedule.json", schedule),
         ("conferences.json", conferences),
         ("games.json", games),
-        ("conf_championship.json", conf_championship),
-        ("brackets.json", brackets),
+        ("brackets_summary.json", brackets_summary),
+        ("conf_championship_summary.json", conf_championship_summary),
         ("last_year.json", build_last_year()),
     ]:
         sizes[name] = write_json(DATA_DIR / name, payload)
+
+    sim_bytes = write_sim_files(
+        DATA_DIR,
+        n_sims,
+        eligibility["fields"],
+        brackets["by_sim"],
+        conf_championship["champions_by_sim"],
+        conf_championship["finalists_by_sim"],
+    )
+    sizes["sim/*.json"] = sim_bytes
 
     print(f"Exported to {DATA_DIR}")
     print(f"  Teams: {len(teams)}, Sims: {n_sims}, Games: {len(schedule)}")

@@ -50,7 +50,10 @@
   </div>
 </div>
 {% elif selected_ids %}
-<p class="error">Select at least 2 valid teams to compare.</p>
+<p class="error">Select at least 2 valid FBS teams to compare.</p>
+{% if invalid_ids %}
+<p class="muted">Could not find: {{ invalid_ids | join(', ') }}</p>
+{% endif %}
 {% endif %}
 {% endblock %}
 {% block scripts %}

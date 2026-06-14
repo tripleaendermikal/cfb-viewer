@@ -43,19 +43,27 @@ CONFERENCE_COLORS = {
 
 class DataStore:
     def __init__(self, data_dir: Path) -> None:
+        self._data_dir = data_dir
+        self._sim_cache: dict[int, dict] = {}
+
         self.meta = self._load(data_dir / "meta.json")
         self.leaderboard = self._load(data_dir / "leaderboard.json")
         self.teams = self._load(data_dir / "teams.json")
         self.eligibility = self._load(data_dir / "eligibility.json")
         self.field_analysis = self._load(data_dir / "field_analysis.json")
-        self.schedule = self._dedupe_schedule(self._load(data_dir / "schedule.json"))
         self.conferences = [
             c for c in self._load(data_dir / "conferences.json")
             if is_fbs_conference(c.get("conference", ""))
         ]
-        self.games = self._load_optional(data_dir / "games.json")
-        self.conf_championship = self._load_optional(data_dir / "conf_championship.json")
-        self.brackets = self._load_optional(data_dir / "brackets.json")
+
+        self._schedule: list[dict] | None = None
+        self._games: dict | None = None
+        self._last_year: dict | None = None
+        self._brackets_summary: dict | None = None
+        self._conf_championship_summary: dict | None = None
+        self._legacy_brackets: dict | None = None
+        self._legacy_conf_championship: dict | None = None
+        self._legacy_eligibility_fields: list | None = None
 
         self.teams_by_id = {t["team_id"]: t for t in self.teams}
         self.fbs_leaderboard = [
@@ -73,19 +81,100 @@ class DataStore:
         self.conference_names = sorted(
             {r["conference"] for r in self.leaderboard if is_fbs_conference(r.get("conference", ""))}
         )
-        self.last_year = self._load_optional(data_dir / "last_year.json")
 
-    @staticmethod
-    def _load_optional(path: Path) -> dict:
-        if not path.is_file():
-            return {}
-        with path.open(encoding="utf-8") as f:
-            return json.load(f)
+    @property
+    def sim_count(self) -> int:
+        return self.eligibility.get("sim_count", self.meta.get("sim_count", 1000))
+
+    @property
+    def has_sim_files(self) -> bool:
+        return (self._data_dir / "sim" / "0001.json").is_file()
 
     @staticmethod
     def _load(path: Path):
         with path.open(encoding="utf-8") as f:
             return json.load(f)
+
+    def _load_optional(self, path: Path) -> dict | list | None:
+        if not path.is_file():
+            return None
+        return self._load(path)
+
+    @property
+    def schedule(self) -> list[dict]:
+        if self._schedule is None:
+            raw = self._load(self._data_dir / "schedule.json")
+            self._schedule = self._dedupe_schedule(raw)
+        return self._schedule
+
+    @property
+    def games(self) -> dict:
+        if self._games is None:
+            data = self._load_optional(self._data_dir / "games.json")
+            self._games = data if isinstance(data, dict) else {}
+        return self._games
+
+    @property
+    def last_year(self) -> dict:
+        if self._last_year is None:
+            data = self._load_optional(self._data_dir / "last_year.json")
+            self._last_year = data if isinstance(data, dict) else {}
+        return self._last_year
+
+    @property
+    def brackets_summary(self) -> dict:
+        if self._brackets_summary is None:
+            data = self._load_optional(self._data_dir / "brackets_summary.json")
+            if data:
+                self._brackets_summary = data
+            else:
+                self._brackets_summary = self._legacy_brackets_data()
+        return self._brackets_summary
+
+    @property
+    def conf_championship_summary(self) -> dict:
+        if self._conf_championship_summary is None:
+            data = self._load_optional(self._data_dir / "conf_championship_summary.json")
+            if data:
+                self._conf_championship_summary = data
+            else:
+                self._conf_championship_summary = self._legacy_conf_championship_data()
+        return self._conf_championship_summary
+
+    def _legacy_brackets_data(self) -> dict:
+        if self._legacy_brackets is None:
+            data = self._load_optional(self._data_dir / "brackets.json")
+            self._legacy_brackets = data if isinstance(data, dict) else {}
+        full = self._legacy_brackets
+        return {
+            "sim_count": full.get("sim_count", self.sim_count),
+            "r1_pairings": full.get("r1_pairings", [[5, 12], [6, 11], [7, 10], [8, 9]]),
+            "team_summary": full.get("team_summary", {}),
+            "by_sim": full.get("by_sim", []),
+        }
+
+    def _legacy_conf_championship_data(self) -> dict:
+        if self._legacy_conf_championship is None:
+            data = self._load_optional(self._data_dir / "conf_championship.json")
+            self._legacy_conf_championship = data if isinstance(data, dict) else {}
+        full = self._legacy_conf_championship
+        return {
+            "sim_count": full.get("sim_count", self.sim_count),
+            "conferences": full.get("conferences", []),
+            "team_summary": full.get("team_summary", {}),
+            "champions_by_sim": full.get("champions_by_sim", []),
+            "finalists_by_sim": full.get("finalists_by_sim", []),
+        }
+
+    def _legacy_eligibility_fields(self) -> list:
+        if self._legacy_eligibility_fields is None:
+            elig_path = self._data_dir / "eligibility.json"
+            if elig_path.is_file():
+                data = self._load(elig_path)
+                self._legacy_eligibility_fields = data.get("fields", [])
+            else:
+                self._legacy_eligibility_fields = []
+        return self._legacy_eligibility_fields
 
     @staticmethod
     def _dedupe_schedule(schedule: list[dict]) -> list[dict]:
@@ -102,6 +191,34 @@ class DataStore:
             key=lambda g: (g.get("game_date", ""), g.get("week") or 0, g.get("game_id", "")),
         )
 
+    def sim_data_at(self, sim_index: int) -> dict | None:
+        """0-based sim index."""
+        if sim_index in self._sim_cache:
+            return self._sim_cache[sim_index]
+
+        if self.has_sim_files:
+            path = self._data_dir / "sim" / f"{sim_index + 1:04d}.json"
+            if path.is_file():
+                data = self._load(path)
+                self._sim_cache[sim_index] = data
+                return data
+            return None
+
+        legacy_brackets = self.brackets_summary.get("by_sim", [])
+        legacy_champs = self.conf_championship_summary.get("champions_by_sim", [])
+        legacy_finalists = self.conf_championship_summary.get("finalists_by_sim", [])
+        fields = self._legacy_eligibility_fields()
+        if sim_index < 0 or sim_index >= self.sim_count:
+            return None
+        data = {
+            "field": fields[sim_index] if sim_index < len(fields) else [],
+            "bracket": legacy_brackets[sim_index] if sim_index < len(legacy_brackets) else {},
+            "conf_champions": legacy_champs[sim_index] if sim_index < len(legacy_champs) else {},
+            "conf_finalists": legacy_finalists[sim_index] if sim_index < len(legacy_finalists) else {},
+        }
+        self._sim_cache[sim_index] = data
+        return data
+
     def team_name(self, team_id: str) -> str:
         t = self.teams_by_id.get(str(team_id))
         if t:
@@ -116,34 +233,33 @@ class DataStore:
         return (t or {}).get("conference", "")
 
     def field_at(self, sim_index: int) -> list[str] | None:
-        fields = self.eligibility.get("fields", [])
-        if 0 <= sim_index < len(fields):
-            return fields[sim_index]
+        data = self.sim_data_at(sim_index)
+        if data:
+            return data.get("field")
         return None
 
     def game_at(self, game_id: str) -> dict | None:
-        if isinstance(self.games, dict):
-            return self.games.get(str(game_id))
-        return None
+        return self.games.get(str(game_id))
 
     def conf_champs_at(self, sim_index: int) -> dict[str, dict] | None:
-        champs = self.conf_championship.get("champions_by_sim", [])
-        if 0 <= sim_index < len(champs):
-            row = champs[sim_index]
-            return {
-                conf: {
-                    "team_id": tid,
-                    "team_name": self.team_name(tid),
-                }
-                for conf, tid in row.items()
+        data = self.sim_data_at(sim_index)
+        if not data:
+            return None
+        row = data.get("conf_champions", {})
+        return {
+            conf: {
+                "team_id": tid,
+                "team_name": self.team_name(tid),
             }
-        return None
+            for conf, tid in row.items()
+        }
 
     def bracket_at(self, sim_index: int) -> dict | None:
-        by_sim = self.brackets.get("by_sim", [])
-        if 0 <= sim_index < len(by_sim):
-            return by_sim[sim_index]
-        return None
+        data = self.sim_data_at(sim_index)
+        if not data:
+            return None
+        bracket = data.get("bracket")
+        return bracket if bracket else None
 
 
 def is_fbs_conference(conf: str) -> bool:
@@ -168,6 +284,17 @@ def create_app() -> Flask:
                 for t in store.fbs_teams
             ],
         }
+
+    @app.errorhandler(404)
+    def not_found(e):
+        team_suggestion = None
+        if request.path.startswith("/team/"):
+            bad_id = request.path.split("/team/", 1)[-1].split("/", 1)[0]
+            for t in store.fbs_teams:
+                if bad_id.lower() in t["team_name"].lower() or bad_id in t["team_id"]:
+                    team_suggestion = t
+                    break
+        return render_template("404.html", team_suggestion=team_suggestion), 404
 
     @app.template_filter("conf_color")
     def conf_color(conf: str) -> str:
@@ -211,7 +338,7 @@ def create_app() -> Flask:
         if sim_raw:
             try:
                 sim_index = int(sim_raw)
-                n = store.brackets.get("sim_count", store.eligibility.get("sim_count", 1000))
+                n = store.sim_count
                 if sim_index < 1 or sim_index > n:
                     sim_error = f"Sim index must be 1–{n}"
                 else:
@@ -222,7 +349,7 @@ def create_app() -> Flask:
                 sim_error = "Invalid sim index"
 
         if team_raw:
-            summary = store.brackets.get("team_summary", {}).get(team_raw)
+            summary = store.brackets_summary.get("team_summary", {}).get(team_raw)
             lb = store.lb_by_id.get(team_raw, {})
             if summary or lb:
                 team_bracket = summary or {}
@@ -238,7 +365,9 @@ def create_app() -> Flask:
             team_filter=team_raw,
             team_bracket=team_bracket,
             team_options=team_options,
-            r1_pairings=store.brackets.get("r1_pairings", [[5, 12], [6, 11], [7, 10], [8, 9]]),
+            r1_pairings=store.brackets_summary.get(
+                "r1_pairings", [[5, 12], [6, 11], [7, 10], [8, 9]]
+            ),
             active="bracket",
         )
 
@@ -282,10 +411,10 @@ def create_app() -> Flask:
             "eligibility_pct": lb.get("eligibility_pct", 0),
             "conf_champ_appearances": lb.get("conf_champ_appearances", 0),
         }
-        ccg = store.conf_championship.get("team_summary", {}).get(team_id, {})
+        ccg = store.conf_championship_summary.get("team_summary", {}).get(team_id, {})
         merged["ccg_appearances"] = ccg.get("ccg_appearances", merged["conf_champ_appearances"])
         merged["ccg_wins"] = ccg.get("ccg_wins", 0)
-        bracket_summary = store.brackets.get("team_summary", {}).get(team_id)
+        bracket_summary = store.brackets_summary.get("team_summary", {}).get(team_id)
         hist_labels = [str(i) for i in range(13)]
         hist_data = [merged["win_histogram"].get(str(i), 0) for i in range(13)]
         return render_template(
@@ -305,11 +434,13 @@ def create_app() -> Flask:
             ids = [x.strip() for x in raw.split(",") if x.strip()][:4]
         selected = []
         chart_datasets = []
+        invalid_ids = []
         colors = ["#3d8bfd", "#3dd68c", "#f5a524", "#ff6b9d"]
         for i, tid in enumerate(ids):
             team = store.teams_by_id.get(tid)
             lb = store.lb_by_id.get(tid, {})
             if not team or not is_fbs_team(team):
+                invalid_ids.append(tid)
                 continue
             hist = team.get("win_histogram", {})
             selected.append(
@@ -327,8 +458,8 @@ def create_app() -> Flask:
                 {
                     "label": team["team_name"],
                     "data": [hist.get(str(w), 0) for w in range(13)],
-                    "backgroundColor": colors[i % len(colors)] + "99",
-                    "borderColor": colors[i % len(colors)],
+                    "backgroundColor": colors[(len(selected) - 1) % len(colors)] + "99",
+                    "borderColor": colors[(len(selected) - 1) % len(colors)],
                     "borderWidth": 1,
                 }
             )
@@ -337,6 +468,7 @@ def create_app() -> Flask:
             "compare.html",
             selected=selected,
             selected_ids=ids,
+            invalid_ids=invalid_ids,
             chart_datasets=chart_datasets,
             team_options=team_options,
             active="compare",
@@ -352,8 +484,8 @@ def create_app() -> Flask:
         if sim_raw:
             try:
                 sim_index = int(sim_raw)
-                if sim_index < 1 or sim_index > store.eligibility.get("sim_count", 1000):
-                    sim_error = f"Sim index must be 1–{store.eligibility.get('sim_count', 1000)}"
+                if sim_index < 1 or sim_index > store.sim_count:
+                    sim_error = f"Sim index must be 1–{store.sim_count}"
                 else:
                     ids = store.field_at(sim_index - 1)
                     if ids:

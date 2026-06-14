@@ -46,6 +46,13 @@ a:hover { text-decoration: underline; }
   flex-wrap: wrap;
 }
 
+.nav-primary,
+.nav-secondary {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .navbar nav a {
   color: var(--muted);
   font-size: 0.95rem;
@@ -221,7 +228,12 @@ table.data-table tr:hover td { background: var(--surface2); }
 .team-search-form {
   flex: 1;
   min-width: 140px;
-  max-width: 220px;
+  max-width: 280px;
+  position: relative;
+}
+
+.team-search-wrap {
+  position: relative;
 }
 
 .team-search-form input[type="search"] {
@@ -232,6 +244,39 @@ table.data-table tr:hover td { background: var(--surface2); }
   padding: 0.4rem 0.6rem;
   border-radius: 4px;
   font-size: 0.9rem;
+}
+
+.team-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.team-search-results li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.team-search-results li button:hover {
+  background: var(--surface2);
 }
 
 .table-scroll {
@@ -262,16 +307,34 @@ table.data-table.compact-table { font-size: 0.85rem; }
 
 .tab-bar {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
 .tab-link {
+  background: var(--surface2);
+  border: 1px solid var(--border);
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.tab-link:hover { color: var(--text); }
+.tab-link:hover,
+.tab-link.active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.tab-link.active {
+  background: var(--surface);
+}
+
+.tab-panel[hidden] {
+  display: none !important;
+}
 
 .bracket-layout {
   display: grid;
@@ -327,12 +390,19 @@ table.data-table.compact-table { font-size: 0.85rem; }
     width: 100%;
   }
 
-  .navbar nav {
+  .nav-primary,
+  .nav-secondary {
     justify-content: center;
-    gap: 0.65rem 1rem;
+    gap: 0.5rem 0.85rem;
   }
 
-  .navbar nav a {
+  .nav-secondary {
+    padding-top: 0.25rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .navbar nav a,
+  .navbar nav button {
     padding: 0.35rem 0;
     min-height: 2.25rem;
     display: inline-flex;

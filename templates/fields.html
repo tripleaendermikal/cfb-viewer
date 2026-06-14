@@ -10,11 +10,13 @@
     <div class="stat-value">{{ analysis.unique_field_count }}</div>
   </div>
   {% set closest = analysis.closest_fields %}
+  {% if closest %}
   <div class="card">
     <div class="stat-label">Closest Field Pair</div>
     <div class="stat-value">{{ closest.shared_count }}/12 shared</div>
-    <div class="muted" style="font-size:0.85rem;">Sim {{ closest.sim_a + 1 }} vs Sim {{ closest.sim_b + 1 }}</div>
+    <div class="muted" style="font-size:0.85rem;">Sim {{ closest.sim_a }} vs Sim {{ closest.sim_b }}</div>
   </div>
+  {% endif %}
 </div>
 
 <h2>Most Frequent Playoff Teams</h2>

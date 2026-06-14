@@ -2,6 +2,8 @@
 
 Local web app for exploring Monte Carlo simulation results exported from the pipeline CSVs.
 
+**Live site:** https://cfb-viewer.onrender.com
+
 ## Prerequisites
 
 - Python 3.10+
@@ -22,34 +24,43 @@ python C:\Users\ender\cfb-viewer\app.py
 
 Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 
-## Data
+## Data layout
 
 `export_sim_data.py` reads canonical CSVs from `C:\Users\ender` and writes JSON to `cfb-viewer/data/`:
 
-| File | Contents |
-|------|----------|
-| `meta.json` | Season, sim count, export time, source paths |
-| `leaderboard.json` | Title odds, eligibility %, playoff apps, avg seed |
-| `teams.json` | Win histograms and avg wins per team |
-| `eligibility.json` | 12 team IDs per sim (compact) |
-| `field_analysis.json` | Top teams, pairs, closest overlapping fields |
-| `schedule.json` | Per-game win_pct (mean across sims) |
-| `conferences.json` | Per-conference aggregates |
-| `last_year.json` | 2025 FBS ratings and game results (ESPN + margin ratings) |
+| File | Contents | Loaded at startup |
+|------|----------|-------------------|
+| `meta.json` | Season, sim count, export time | Yes |
+| `leaderboard.json` | Title odds, playoff odds, conf title, FPI | Yes |
+| `teams.json` | Win histograms and avg wins | Yes |
+| `eligibility.json` | `{ sim_count }` only | Yes |
+| `field_analysis.json` | Top teams, pairs, closest fields | Yes |
+| `conferences.json` | Per-conference aggregates | Yes |
+| `schedule.json` | Per-game win_pct and avg margin | Lazy (schedule route) |
+| `games.json` | Game detail records keyed by `game_id` | Lazy (game/schedule routes) |
+| `brackets_summary.json` | Team seed histograms, avg seed | Lazy (bracket/team routes) |
+| `conf_championship_summary.json` | CCG team summary | Lazy (team route) |
+| `data/sim/0001.json` … | Per-sim field, bracket, conf champs | On demand (sim lookup) |
+| `last_year.json` | 2025 FBS ratings and game results | Lazy (last-year route) |
 
-The Flask app loads these JSON files at startup. Re-run the export script after any pipeline change; restart the app to pick up new data.
+Large per-sim arrays are split into `data/sim/` so the app cold-starts on ~150 KB of core JSON instead of parsing multi-megabyte monolithic files.
+
+Re-run the export script after any pipeline change; restart the app (or redeploy) to pick up new data.
 
 ## Pages
 
 | Route | View |
 |-------|------|
-| `/` | Leaderboard — sortable, filter by conference |
-| `/team/<id>` | Team detail — stats + win distribution chart |
+| `/` | Leaderboard — sortable, filter by conference, team search |
+| `/team/<id>` | Team detail — stats, CCG record, win chart |
 | `/compare` | Compare 2–4 teams side-by-side |
-| `/fields` | Playoff field frequency + sim lookup |
-| `/schedule` | Per-game win rates with team/conference/week filters |
+| `/fields` | Playoff field frequency + sim lookup (conf champs) |
+| `/bracket` | Playoff bracket by sim or team seed history |
+| `/schedule` | Per-game win rates; rows link to game detail |
+| `/game/<id>` | Single-game matchup detail |
 | `/conferences` | Conference summary cards and team tables |
-| `/last-year` | Last Year — 2025 team ratings and game results |
+| `/methodology` | How the simulations and metrics work |
+| `/last-year` | 2025 team ratings and game results |
 
 ## Notes
 
@@ -61,26 +72,6 @@ The Flask app loads these JSON files at startup. Re-run the export script after 
 
 Production uses **gunicorn** via [`wsgi.py`](wsgi.py). Config is in [`render.yaml`](render.yaml).
 
-### First-time setup
-
-1. Install [Git for Windows](https://git-scm.com/download/win) and create a **public** GitHub repo (e.g. `cfb-viewer`).
-2. Push this folder (include `data/*.json` — the server has no access to local CSVs):
-
-```bash
-cd C:\Users\ender\cfb-viewer
-git init
-git add .
-git commit -m "Initial commit: CFB simulation viewer"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/cfb-viewer.git
-git push -u origin main
-```
-
-3. Sign in at [render.com](https://render.com) → **New → Blueprint** → connect the repo.
-4. After deploy, open the URL Render provides (e.g. `https://cfb-viewer.onrender.com`).
-
-On the free plan, the app sleeps after ~15 minutes of inactivity; the first visit after that may take ~30 seconds to wake up.
-
 ### Refresh data after pipeline runs
 
 ```bash
@@ -91,6 +82,4 @@ git commit -m "Refresh simulation data"
 git push
 ```
 
-Render auto-redeploys on push to `main`.
-
-**Live site:** https://cfb-viewer.onrender.com
+Render auto-redeploys on push to `main`. On the free plan, the app sleeps after ~15 minutes of inactivity; cold starts are faster with lazy JSON loading.

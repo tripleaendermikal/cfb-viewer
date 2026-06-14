@@ -11,21 +11,21 @@
   <header class="navbar">
     <a class="brand" href="{{ url_for('leaderboard') }}">CFB {{ meta.season_year }} Sims</a>
     <form class="team-search-form" id="global-team-search" autocomplete="off">
-      <input type="search" id="team-search-input" list="team-search-list" placeholder="Find team…" aria-label="Find team">
-      <datalist id="team-search-list">
-        {% for t in team_search %}
-        <option value="{{ t.name }}" data-id="{{ t.id }}"></option>
-        {% endfor %}
-      </datalist>
+      <div class="team-search-wrap">
+        <input type="search" id="team-search-input" placeholder="Find team…" aria-label="Find team" aria-autocomplete="list" aria-controls="team-search-results">
+        <ul class="team-search-results" id="team-search-results" hidden></ul>
+      </div>
     </form>
-    <nav>
+    <nav class="nav-primary">
       <a href="{{ url_for('leaderboard') }}" class="{% if active == 'leaderboard' %}active{% endif %}">Leaderboard</a>
+      <a href="{{ url_for('schedule') }}" class="{% if active == 'schedule' %}active{% endif %}">Schedule</a>
+      <a href="{{ url_for('bracket') }}" class="{% if active == 'bracket' %}active{% endif %}">Bracket</a>
+      <a href="{{ url_for('methodology') }}" class="{% if active == 'methodology' %}active{% endif %}">How it works</a>
+    </nav>
+    <nav class="nav-secondary">
       <a href="{{ url_for('compare') }}" class="{% if active == 'compare' %}active{% endif %}">Compare</a>
       <a href="{{ url_for('fields') }}" class="{% if active == 'fields' %}active{% endif %}">Playoff Fields</a>
-      <a href="{{ url_for('bracket') }}" class="{% if active == 'bracket' %}active{% endif %}">Bracket</a>
-      <a href="{{ url_for('schedule') }}" class="{% if active == 'schedule' %}active{% endif %}">Schedule</a>
       <a href="{{ url_for('conferences') }}" class="{% if active == 'conferences' %}active{% endif %}">Conferences</a>
-      <a href="{{ url_for('methodology') }}" class="{% if active == 'methodology' %}active{% endif %}">How it works</a>
       <a href="{{ url_for('last_year') }}" class="{% if active == 'last_year' %}active{% endif %}">Last Year</a>
     </nav>
     <div class="meta">{{ meta.sim_count }} sims · {{ meta.team_count }} teams</div>
@@ -35,19 +35,65 @@
   </main>
   <script>
     (function() {
-      var teamMap = {};
-      {% for t in team_search %}
-      teamMap[{{ t.name | tojson }}] = {{ t.id | tojson }};
-      {% endfor %}
+      var teams = [
+        {% for t in team_search %}
+        { id: {{ t.id | tojson }}, name: {{ t.name | tojson }} },
+        {% endfor %}
+      ];
+
       var form = document.getElementById('global-team-search');
       var input = document.getElementById('team-search-input');
-      if (form && input) {
+      var results = document.getElementById('team-search-results');
+
+      function matchTeams(query) {
+        var q = query.trim().toLowerCase();
+        if (!q) return [];
+        var exact = [];
+        var partial = [];
+        teams.forEach(function(t) {
+          var name = t.name.toLowerCase();
+          if (name === q) exact.push(t);
+          else if (name.indexOf(q) !== -1) partial.push(t);
+        });
+        return exact.concat(partial).slice(0, 8);
+      }
+
+      function goToTeam(id) {
+        window.location.href = '/team/' + id;
+      }
+
+      function renderResults(matches) {
+        results.innerHTML = '';
+        if (!matches.length) {
+          results.hidden = true;
+          return;
+        }
+        matches.forEach(function(t) {
+          var li = document.createElement('li');
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = t.name;
+          btn.addEventListener('click', function() { goToTeam(t.id); });
+          li.appendChild(btn);
+          results.appendChild(li);
+        });
+        results.hidden = false;
+      }
+
+      if (form && input && results) {
+        input.addEventListener('input', function() {
+          renderResults(matchTeams(input.value));
+        });
+        input.addEventListener('focus', function() {
+          renderResults(matchTeams(input.value));
+        });
+        document.addEventListener('click', function(e) {
+          if (!form.contains(e.target)) results.hidden = true;
+        });
         form.addEventListener('submit', function(e) {
           e.preventDefault();
-          var name = input.value.trim();
-          if (teamMap[name]) {
-            window.location.href = '/team/' + teamMap[name];
-          }
+          var matches = matchTeams(input.value);
+          if (matches.length) goToTeam(matches[0].id);
         });
       }
     })();

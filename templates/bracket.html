@@ -4,12 +4,12 @@
 <h1>Playoff Bracket</h1>
 <p class="subtitle">12-team bracket by simulation or team-centric seed history</p>
 
-<div class="tab-bar">
-  <a href="{{ url_for('bracket') }}#sim-tab" class="tab-link">By simulation</a>
-  <a href="{{ url_for('bracket') }}#team-tab" class="tab-link">By team</a>
+<div class="tab-bar" role="tablist">
+  <button type="button" class="tab-link active" data-tab="sim-tab" role="tab" aria-selected="true">By simulation</button>
+  <button type="button" class="tab-link" data-tab="team-tab" role="tab" aria-selected="false">By team</button>
 </div>
 
-<div class="card" id="sim-tab">
+<div class="card tab-panel active" id="sim-tab" role="tabpanel">
   <h2 style="margin-top:0;font-size:1.1rem;">Simulation lookup</h2>
   <form class="filters" method="get">
   {% if team_filter %}<input type="hidden" name="team" value="{{ team_filter }}">{% endif %}
@@ -78,7 +78,7 @@
   {% endif %}
 </div>
 
-<div class="card" id="team-tab">
+<div class="card tab-panel" id="team-tab" role="tabpanel" hidden>
   <h2 style="margin-top:0;font-size:1.1rem;">Team bracket history</h2>
   <form class="filters" method="get">
   {% if sim_index %}<input type="hidden" name="sim" value="{{ sim_index }}">{% endif %}
@@ -128,4 +128,36 @@
   {% endif %}
   {% endif %}
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function() {
+    var tabs = document.querySelectorAll('.tab-bar .tab-link');
+    var panels = document.querySelectorAll('.tab-panel');
+    function showTab(id) {
+      tabs.forEach(function(t) {
+        var active = t.dataset.tab === id;
+        t.classList.toggle('active', active);
+        t.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      panels.forEach(function(p) {
+        var active = p.id === id;
+        p.classList.toggle('active', active);
+        p.hidden = !active;
+      });
+      if (history.replaceState) {
+        history.replaceState(null, '', '#' + id);
+      }
+    }
+    tabs.forEach(function(t) {
+      t.addEventListener('click', function() { showTab(t.dataset.tab); });
+    });
+    var hash = (location.hash || '').replace('#', '');
+    if (hash === 'team-tab' || ({{ 'true' if team_filter else 'false' }} && !{{ 'true' if sim_index else 'false' }})) {
+      showTab('team-tab');
+    } else {
+      showTab('sim-tab');
+    }
+  })();
+</script>
 {% endblock %}
