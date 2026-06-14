@@ -99,12 +99,6 @@
       <div class="stat-label">Title Odds</div>
       <div class="stat-value">{{ team_bracket.title_odds_pct }}%</div>
     </div>
-    {% if team_bracket.avg_seed is not none %}
-    <div class="card">
-      <div class="stat-label">Avg Seed (when in)</div>
-      <div class="stat-value">{{ team_bracket.avg_seed }}</div>
-    </div>
-    {% endif %}
     {% if team_bracket.field_appearances %}
     <div class="card">
       <div class="stat-label">Field Appearances</div>

@@ -134,10 +134,7 @@
           <th data-sort="num">Avg Wins</th>
           <th data-sort="num">Conf Title %</th>
           <th data-sort="num">CCG Apps</th>
-          <th data-sort="num">CCG Win %</th>
-          <th data-sort="num">CCG Game Win %</th>
           <th data-sort="num">Playoff %</th>
-          <th data-sort="num">Avg Seed</th>
           <th data-sort="num">Title Odds</th>
         </tr>
       </thead>
@@ -153,14 +150,7 @@
           <td class="num" data-value="{{ t.avg_wins }}">{{ "%.2f"|format(t.avg_wins) }}</td>
           <td class="num" data-value="{{ t.conf_champ_odds_pct }}">{{ t.conf_champ_odds_pct }}%</td>
           <td class="num" data-value="{{ t.conf_champ_appearances }}">{{ t.conf_champ_appearances }}</td>
-          <td class="num" data-value="{{ t.ccg_win_pct if t.ccg_win_pct is not none else '' }}">
-            {% if t.ccg_win_pct is not none %}{{ t.ccg_win_pct }}%{% else %}—{% endif %}
-          </td>
-          <td class="num" data-value="{{ t.conf_champ_game_win_pct }}">{{ t.conf_champ_game_win_pct }}%</td>
           <td class="num" data-value="{{ t.playoff_field_pct }}">{{ t.playoff_field_pct }}%</td>
-          <td class="num" data-value="{{ t.avg_seed if t.avg_seed is not none else '' }}">
-            {% if t.avg_seed is not none %}{{ "%.2f"|format(t.avg_seed) }}{% else %}—{% endif %}
-          </td>
           <td class="num" data-value="{{ t.title_odds_pct }}">{{ t.title_odds_pct }}%</td>
         </tr>
         {% endfor %}

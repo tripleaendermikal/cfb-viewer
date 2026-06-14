@@ -22,7 +22,7 @@
     <p class="team-hero-links">
       <a href="{{ url_for('schedule', team=team.team_id) }}">View schedule</a>
       · <a href="{{ url_for('compare', teams=team.team_id) }}">Compare</a>
-      {% if bracket_summary and bracket_summary.avg_seed is not none %}
+      {% if bracket_summary and bracket_summary.field_appearances %}
       · <a href="{{ url_for('bracket', team=team.team_id) }}">Bracket history</a>
       {% endif %}
     </p>

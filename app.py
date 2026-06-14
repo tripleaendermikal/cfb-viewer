@@ -87,14 +87,11 @@ def enrich_conference_teams(conf: dict, store: "DataStore") -> list[dict]:
         field_apps = br_t.get("field_appearances", lb.get("playoff_appearances", 0))
         row = dict(t)
         row["ccg_wins"] = wins
-        row["ccg_win_pct"] = round(wins / apps * 100, 1) if apps else None
         row["playoff_appearances"] = field_apps
         row["playoff_field_pct"] = round(field_apps / sim_count * 100, 1) if sim_count else 0
-        row["avg_seed"] = br_t.get("avg_seed")
         row["baseline_fpi"] = lb.get("baseline_fpi")
         row["fpi_ci_low"] = lb.get("fpi_ci_low")
         row["fpi_ci_high"] = lb.get("fpi_ci_high")
-        row["conf_champ_game_win_pct"] = lb.get("conf_champ_game_win_pct", 0)
         enriched.append(row)
     return enriched
 
