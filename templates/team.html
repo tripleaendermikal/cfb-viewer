@@ -51,6 +51,12 @@
     <div class="stat-label">Avg Wins</div>
     <div class="stat-value">{{ "%.2f"|format(team.avg_wins or 0) }}</div>
   </div>
+  {% if team.sos is not none %}
+  <div class="card">
+    <div class="stat-label">SOS</div>
+    <div class="stat-value">{{ "%+.1f"|format(team.sos) }}</div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="card">

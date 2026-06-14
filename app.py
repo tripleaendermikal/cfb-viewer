@@ -92,6 +92,7 @@ def enrich_conference_teams(conf: dict, store: "DataStore") -> list[dict]:
         row["baseline_fpi"] = lb.get("baseline_fpi")
         row["fpi_ci_low"] = lb.get("fpi_ci_low")
         row["fpi_ci_high"] = lb.get("fpi_ci_high")
+        row["sos"] = lb.get("sos") or t.get("sos")
         enriched.append(row)
     return enriched
 
@@ -728,6 +729,8 @@ def create_app() -> Flask:
             "conf_champ_odds_pct": lb.get("conf_champ_odds_pct", 0),
             "eligibility_pct": lb.get("eligibility_pct", 0),
             "conf_champ_appearances": lb.get("conf_champ_appearances", 0),
+            "baseline_fpi": lb.get("baseline_fpi"),
+            "sos": lb.get("sos") or team.get("sos"),
         }
         ccg = store.conf_championship_summary.get("team_summary", {}).get(team_id, {})
         merged["ccg_appearances"] = ccg.get("ccg_appearances", merged["conf_champ_appearances"])
@@ -808,34 +811,60 @@ def create_app() -> Flask:
     def fields():
         sim_raw = request.args.get("sim", "").strip()
         sim_index = None
-        sim_field = None
+        sim_field_rows = None
         sim_error = None
-        sim_conf_champs = None
         if sim_raw:
             try:
                 sim_index = int(sim_raw)
                 if sim_index < 1 or sim_index > store.sim_count:
                     sim_error = f"Sim index must be 1–{store.sim_count}"
                 else:
-                    ids = store.field_at(sim_index - 1)
-                    if ids:
-                        sim_field = [
-                            {
-                                "team_id": tid,
-                                "team_name": store.team_name(tid),
-                                "conference": store.conference_for(tid),
-                            }
-                            for tid in ids
-                        ]
-                    sim_conf_champs = store.conf_champs_at(sim_index - 1)
+                    bracket = store.bracket_at(sim_index - 1)
+                    conf_champs = store.conf_champs_at(sim_index - 1) or {}
+                    champ_by_team = {
+                        info["team_id"]: conf for conf, info in conf_champs.items()
+                    }
+                    if bracket and bracket.get("seeds"):
+                        sim_field_rows = []
+                        for s in bracket["seeds"]:
+                            tid = s["team_id"]
+                            conf = store.conference_for(tid)
+                            is_champ = tid in champ_by_team
+                            sim_field_rows.append(
+                                {
+                                    "seed": s["seed"],
+                                    "team_id": tid,
+                                    "team_name": s["team_name"],
+                                    "conference": conf,
+                                    "fpi": s.get("fpi"),
+                                    "is_conf_champ": is_champ,
+                                    "champ_conference": champ_by_team.get(tid),
+                                    "is_independent": conf == "FBS Indep.",
+                                }
+                            )
+                    else:
+                        ids = store.field_at(sim_index - 1)
+                        if ids:
+                            sim_field_rows = [
+                                {
+                                    "seed": None,
+                                    "team_id": tid,
+                                    "team_name": store.team_name(tid),
+                                    "conference": store.conference_for(tid),
+                                    "fpi": None,
+                                    "is_conf_champ": tid in champ_by_team,
+                                    "champ_conference": champ_by_team.get(tid),
+                                    "is_independent": store.conference_for(tid) == "FBS Indep.",
+                                }
+                                for tid in ids
+                            ]
             except ValueError:
                 sim_error = "Invalid sim index"
         return render_template(
             "fields.html",
             analysis=store.field_analysis,
             sim_index=sim_index,
-            sim_field=sim_field,
-            sim_conf_champs=sim_conf_champs,
+            sim_field_rows=sim_field_rows,
             sim_error=sim_error,
             active="fields",
         )

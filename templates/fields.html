@@ -1,104 +1,335 @@
 {% extends "base.html" %}
 {% block title %}Playoff Field Analysis — CFB Simulation Viewer{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
 {% block content %}
-<h1>Playoff Field Analysis</h1>
-<p class="subtitle">{{ analysis.unique_field_count }} unique 12-team fields across {{ meta.sim_count }} simulations</p>
+<div class="fields-page">
+  <header class="fields-hero">
+    <h1>Playoff Field Analysis</h1>
+    <p class="subtitle">
+      {{ analysis.unique_field_count }} unique 12-team fields across {{ meta.sim_count }} simulations.
+      Every sim applies <a href="{{ url_for('methodology') }}">autobid and eligibility rules</a> to trim the field to exactly 12 teams.
+    </p>
+  </header>
 
-<div class="card-grid">
-  <div class="card">
-    <div class="stat-label">Unique Fields</div>
-    <div class="stat-value">{{ analysis.unique_field_count }}</div>
+  <div class="card field-lookup">
+    <h2 style="margin-top:0;font-size:1.1rem;">Sim field lookup</h2>
+    <form class="filters" method="get">
+      <label>
+        Simulation (1–{{ meta.sim_count }})
+        <input type="number" name="sim" min="1" max="{{ meta.sim_count }}" value="{{ sim_index or '' }}" placeholder="e.g. 50">
+      </label>
+      <button type="submit" class="btn">Show field</button>
+    </form>
+    {% if sim_error %}
+    <p class="error">{{ sim_error }}</p>
+    {% elif sim_field_rows %}
+    <p style="margin-bottom:0.5rem;">
+      <strong>Sim {{ sim_index }} — 12-team field</strong>
+      · <a href="{{ url_for('bracket', sim=sim_index) }}">View bracket →</a>
+    </p>
+    <div class="table-scroll">
+    <table class="data-table compact-table">
+      <thead>
+        <tr>
+          <th data-sort="num">Seed</th>
+          <th data-sort="text">Team</th>
+          <th data-sort="text">Conference</th>
+          <th data-sort="num">Rating</th>
+          <th data-sort="text">Conf champ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in sim_field_rows %}
+        <tr>
+          <td class="num" data-value="{{ t.seed if t.seed is not none else '' }}">
+            {% if t.seed is not none %}{{ t.seed }}{% else %}—{% endif %}
+          </td>
+          <td data-value="{{ t.team_name }}">
+            <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+          </td>
+          <td data-value="{{ t.conference }}">
+            {% if t.conference %}
+            <span class="badge" style="background:{{ t.conference | conf_color }}">{{ t.conference }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="num" data-value="{{ t.fpi if t.fpi is not none else '' }}">
+            {% if t.fpi is not none %}{{ "%.1f"|format(t.fpi) }}{% else %}—{% endif %}
+          </td>
+          <td data-value="{% if t.is_conf_champ %}yes{% elif t.is_independent %}indep{% else %}no{% endif %}">
+            {% if t.is_conf_champ %}
+            <span class="badge" style="background:{{ t.champ_conference | conf_color }};font-size:0.7rem;">{{ t.champ_conference }}</span>
+            {% elif t.is_independent %}
+            <span class="muted">Independent</span>
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
   </div>
-  {% set closest = analysis.closest_fields %}
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="stat-label">Unique Fields</div>
+      <div class="stat-value">{{ analysis.unique_field_count }}</div>
+    </div>
+    {% set closest = analysis.closest_fields %}
+    {% if closest %}
+    <div class="card">
+      <div class="stat-label">Closest Field Pair</div>
+      <div class="stat-value">{{ closest.shared_count }}/12 shared</div>
+      <div class="muted" style="font-size:0.85rem;">
+        <a href="{{ url_for('fields', sim=closest.sim_a) }}">Sim {{ closest.sim_a }}</a>
+        vs
+        <a href="{{ url_for('fields', sim=closest.sim_b) }}">Sim {{ closest.sim_b }}</a>
+      </div>
+    </div>
+    {% endif %}
+    {% if analysis.p4_avg_teams_in_field is not none %}
+    <div class="card">
+      <div class="stat-label">Avg P4 Teams per Field</div>
+      <div class="stat-value">{{ "%.1f"|format(analysis.p4_avg_teams_in_field) }}</div>
+      <div class="muted" style="font-size:0.8rem;">SEC, Big Ten, ACC, Big 12 combined</div>
+    </div>
+    {% endif %}
+    {% if analysis.pct_sims_with_g6 is not none %}
+    <div class="card">
+      <div class="stat-label">Sims with G6 Team</div>
+      <div class="stat-value">{{ analysis.pct_sims_with_g6 }}%</div>
+      <div class="muted" style="font-size:0.8rem;">Group of 6 in the playoff field</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;font-size:1.1rem;">Most frequent playoff teams</h2>
+    <p class="muted" style="margin-top:0;">Top 15 by field appearance rate across all simulations.</p>
+    <div class="chart-wrap tall">
+      <canvas id="fieldFreqChart"></canvas>
+    </div>
+    <div class="table-scroll">
+    <table class="data-table compact-table">
+      <thead>
+        <tr>
+          <th data-sort="text">Team</th>
+          <th data-sort="text">Conference</th>
+          <th data-sort="num">Count</th>
+          <th data-sort="num">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in analysis.top_teams %}
+        <tr>
+          <td data-value="{{ t.team_name }}">
+            <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+          </td>
+          <td data-value="{{ t.conference }}">
+            {% if t.conference %}
+            <span class="badge" style="background:{{ t.conference | conf_color }}">{{ t.conference }}</span>
+            {% endif %}
+          </td>
+          <td class="num" data-value="{{ t.count }}">{{ t.count }}</td>
+          <td class="num" data-value="{{ t.pct }}">{{ t.pct }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="fields-analytics-grid">
+    {% if analysis.conference_representation %}
+    <div class="card">
+      <h2 style="margin-top:0;font-size:1.1rem;">Conference representation</h2>
+      <p class="muted" style="margin-top:0;">Average teams per sim and how often a league places at least one team in the field.</p>
+      <div class="table-scroll">
+      <table class="data-table compact-table">
+        <thead>
+          <tr>
+            <th data-sort="text">Conference</th>
+            <th data-sort="num">Avg teams</th>
+            <th data-sort="num">% sims w/ member</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in analysis.conference_representation %}
+          <tr>
+            <td data-value="{{ c.conference }}">
+              <span class="badge" style="background:{{ c.conference | conf_color }}">{{ c.conference }}</span>
+            </td>
+            <td class="num" data-value="{{ c.avg_teams_in_field }}">{{ "%.2f"|format(c.avg_teams_in_field) }}</td>
+            <td class="num" data-value="{{ c.pct_sims_with_member }}">{{ c.pct_sims_with_member }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <h2 style="margin-top:0;font-size:1.1rem;">Bubble watch</h2>
+      <p class="muted" style="margin-top:0;">Teams in the 15–30% field range. With {{ analysis.unique_field_count }} distinct fields, there is no single “last team in.”</p>
+      {% if analysis.bubble_teams %}
+      <ul class="fields-bubble-list">
+        {% for t in analysis.bubble_teams %}
+        <li>
+          <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+          <span class="num">{{ t.pct }}%</span>
+          {% if t.conference %}
+          <span class="badge" style="background:{{ t.conference | conf_color }};font-size:0.65rem;">{{ t.conference }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">No teams in the bubble range for this export.</p>
+      {% endif %}
+      {% if analysis.g6_in_field %}
+      <h3 style="font-size:0.95rem;margin:1.25rem 0 0.5rem;">G6 teams per field</h3>
+      <div class="chart-wrap" style="height:180px;">
+        <canvas id="g6FieldChart"></canvas>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
   {% if closest %}
   <div class="card">
-    <div class="stat-label">Closest Field Pair</div>
-    <div class="stat-value">{{ closest.shared_count }}/12 shared</div>
-    <div class="muted" style="font-size:0.85rem;">Sim {{ closest.sim_a }} vs Sim {{ closest.sim_b }}</div>
+    <h2 style="margin-top:0;font-size:1.1rem;">Closest field pair</h2>
+    <p class="muted" style="margin-top:0;">
+      Sim {{ closest.sim_a }} and Sim {{ closest.sim_b }} share {{ closest.shared_count }} of 12 teams.
+    </p>
+    <div class="fields-closest-grid">
+      <div>
+        <h3 style="font-size:0.9rem;margin:0 0 0.5rem;">Shared ({{ closest.shared_count }})</h3>
+        <ul class="fields-closest-list">
+          {% for name in closest.shared_team_names %}
+          <li>{{ name }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size:0.9rem;margin:0 0 0.5rem;">
+          Only in <a href="{{ url_for('fields', sim=closest.sim_a) }}">Sim {{ closest.sim_a }}</a>
+        </h3>
+        <ul class="fields-closest-list">
+          {% for name in closest.get('only_a_names', []) %}
+          <li>{{ name }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size:0.9rem;margin:0 0 0.5rem;">
+          Only in <a href="{{ url_for('fields', sim=closest.sim_b) }}">Sim {{ closest.sim_b }}</a>
+        </h3>
+        <ul class="fields-closest-list">
+          {% for name in closest.get('only_b_names', []) %}
+          <li>{{ name }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
   </div>
   {% endif %}
+
+  <div class="card">
+    <h2 style="margin-top:0;font-size:1.1rem;">Top team pairs (both in field)</h2>
+    <p class="muted" style="margin-top:0;">Most common co-occurrences across all simulated playoff fields.</p>
+    <div class="table-scroll">
+    <table class="data-table compact-table">
+      <thead>
+        <tr>
+          <th data-sort="text">Pair</th>
+          <th data-sort="num">Count</th>
+          <th data-sort="num">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in analysis.top_pairs %}
+        <tr>
+          <td data-value="{{ p.team_a_name }}">
+            <a href="{{ url_for('team_detail', team_id=p.team_a_id) }}">{{ p.team_a_name }}</a>
+            {% if p.team_a_conference %}
+            <span class="badge" style="background:{{ p.team_a_conference | conf_color }};font-size:0.65rem;">{{ p.team_a_conference }}</span>
+            {% endif %}
+            +
+            <a href="{{ url_for('team_detail', team_id=p.team_b_id) }}">{{ p.team_b_name }}</a>
+            {% if p.team_b_conference %}
+            <span class="badge" style="background:{{ p.team_b_conference | conf_color }};font-size:0.65rem;">{{ p.team_b_conference }}</span>
+            {% endif %}
+          </td>
+          <td class="num" data-value="{{ p.count }}">{{ p.count }}</td>
+          <td class="num" data-value="{{ p.pct }}">{{ p.pct }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
 </div>
-
-<h2>Most Frequent Playoff Teams</h2>
-<table class="data-table">
-  <thead>
-    <tr>
-      <th data-sort="text">Team</th>
-      <th data-sort="num">Count</th>
-      <th data-sort="num">%</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for t in analysis.top_teams %}
-    <tr>
-      <td data-value="{{ t.team_name }}">
-        <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
-      </td>
-      <td class="num" data-value="{{ t.count }}">{{ t.count }}</td>
-      <td class="num" data-value="{{ t.pct }}">{{ t.pct }}%</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<h2>Top Team Pairs (both in field)</h2>
-<table class="data-table">
-  <thead>
-    <tr>
-      <th data-sort="text">Pair</th>
-      <th data-sort="num">Count</th>
-      <th data-sort="num">%</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for p in analysis.top_pairs %}
-    <tr>
-      <td data-value="{{ p.team_a_name }}">
-        <a href="{{ url_for('team_detail', team_id=p.team_a_id) }}">{{ p.team_a_name }}</a>
-        +
-        <a href="{{ url_for('team_detail', team_id=p.team_b_id) }}">{{ p.team_b_name }}</a>
-      </td>
-      <td class="num" data-value="{{ p.count }}">{{ p.count }}</td>
-      <td class="num" data-value="{{ p.pct }}">{{ p.pct }}%</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<div class="card field-lookup">
-  <h2 style="margin-top:0;font-size:1.1rem;">Sim field lookup</h2>
-  <form class="filters" method="get">
-    <label>
-      Simulation (1–{{ meta.sim_count }})
-      <input type="number" name="sim" min="1" max="{{ meta.sim_count }}" value="{{ sim_index or '' }}" placeholder="e.g. 50">
-    </label>
-    <button type="submit" class="btn">Show field</button>
-  </form>
-  {% if sim_error %}
-  <p class="error">{{ sim_error }}</p>
-  {% elif sim_field %}
-  <p><strong>Sim {{ sim_index }} — 12-team field</strong> · <a href="{{ url_for('bracket', sim=sim_index) }}">View bracket</a></p>
-  <div class="field-team-list">
-    {% for t in sim_field %}
-    <span>
-      <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
-      {% if t.conference %}
-      <span class="badge" style="background:{{ t.conference | conf_color }};font-size:0.7rem;">{{ t.conference }}</span>
-      {% endif %}
-    </span>
-    {% endfor %}
-  </div>
-  {% if sim_conf_champs %}
-  <h3 style="margin-top:1.25rem;font-size:1rem;">Conference champions (this sim)</h3>
-  <div class="field-team-list">
-    {% for conf, info in sim_conf_champs|dictsort %}
-    <span>
-      <span class="badge" style="background:{{ conf | conf_color }};font-size:0.7rem;">{{ conf }}</span>
-      <a href="{{ url_for('team_detail', team_id=info.team_id) }}">{{ info.team_name }}</a>
-    </span>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endif %}
-</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const barColor = '#4a9eff';
+  const topTeams = {{ analysis.top_teams[:15] | tojson }};
+  const freqEl = document.getElementById('fieldFreqChart');
+  if (freqEl && topTeams.length) {
+    new Chart(freqEl, {
+      type: 'bar',
+      data: {
+        labels: topTeams.map(t => t.team_name),
+        datasets: [{
+          label: 'Field %',
+          data: topTeams.map(t => t.pct),
+          backgroundColor: barColor + '99',
+          borderColor: barColor,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
+          x: { ticks: { maxRotation: 45, minRotation: 45 } }
+        }
+      }
+    });
+  }
+  const g6Data = {{ analysis.g6_in_field | tojson }};
+  const g6El = document.getElementById('g6FieldChart');
+  if (g6El && g6Data) {
+    const labels = ['0 G6', '1 G6', '2+ G6'];
+    const keys = ['0', '1', '2+'];
+    new Chart(g6El, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Simulations',
+          data: keys.map(k => g6Data[k] || 0),
+          backgroundColor: '#6bcb7799',
+          borderColor: '#6bcb77',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: 'Sims' } }
+        }
+      }
+    });
+  }
+</script>
 {% endblock %}

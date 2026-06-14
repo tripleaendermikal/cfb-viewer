@@ -30,6 +30,7 @@
       <th data-sort="text">Team</th>
       <th data-sort="text">Conference</th>
       <th data-sort="num">Rating</th>
+      <th data-sort="num">SOS</th>
       <th data-sort="num">Rating Range</th>
       <th data-sort="num">Title Odds</th>
       <th data-sort="num">Conf Title Odds</th>
@@ -51,6 +52,9 @@
       </td>
       <td class="num" data-value="{{ row.baseline_fpi if row.baseline_fpi is not none else '' }}">
         {% if row.baseline_fpi is not none %}{{ "%.1f"|format(row.baseline_fpi) }}{% else %}—{% endif %}
+      </td>
+      <td class="num" data-value="{{ row.sos if row.sos is not none else '' }}">
+        {% if row.sos is not none %}{{ "%+.1f"|format(row.sos) }}{% else %}—{% endif %}
       </td>
       <td class="num" data-value="{{ row.fpi_ci_low if row.fpi_ci_low is not none else '' }}">
         {% if row.fpi_ci_low is not none and row.fpi_ci_high is not none %}{{ "%.1f"|format(row.fpi_ci_low) }} – {{ "%.1f"|format(row.fpi_ci_high) }}{% else %}—{% endif %}

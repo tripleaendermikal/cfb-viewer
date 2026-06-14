@@ -228,6 +228,48 @@ table.data-table tr:hover td { background: var(--surface2); }
   font-size: 0.85rem;
 }
 
+.fields-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.fields-bubble-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fields-bubble-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.fields-bubble-list li:last-child {
+  border-bottom: none;
+}
+
+.fields-closest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.fields-closest-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.fields-closest-list li {
+  margin-bottom: 0.25rem;
+}
+
 .muted { color: var(--muted); }
 .error { color: #ff6b6b; }
 
@@ -949,7 +991,7 @@ table.data-table.compact-table { font-size: 0.85rem; }
 }
 
 .conf-summary-card {
-  margin-bottom: 1rem;
+  margin-top: 1rem;
   border-left: 3px solid var(--conf-color);
 }
 

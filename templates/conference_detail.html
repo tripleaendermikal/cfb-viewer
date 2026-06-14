@@ -15,12 +15,6 @@
     </p>
   </header>
 
-  {% if conference_summary %}
-  <div class="card conf-summary-card">
-    <p class="conf-summary">{{ conference_summary }}</p>
-  </div>
-  {% endif %}
-
   <div class="card-grid">
     <div class="card conf-accent-card">
       <div class="stat-label">Total Title Odds</div>
@@ -46,10 +40,10 @@
       <div class="muted" style="font-size:0.8rem;">Top 3 teams' share of this conference's title odds</div>
     </div>
     {% endif %}
-    {% if deep.get('avg_conf_opponent_fpi') is not none %}
+    {% if deep.get('avg_sos') is not none %}
     <div class="card conf-accent-card">
-      <div class="stat-label">Avg Conf Opponent Rating</div>
-      <div class="stat-value">{{ "%.1f"|format(deep.avg_conf_opponent_fpi) }}</div>
+      <div class="stat-label">Avg SOS</div>
+      <div class="stat-value">{{ "%+.1f"|format(deep.avg_sos) }}</div>
     </div>
     {% endif %}
   </div>
@@ -169,6 +163,7 @@
         <tr>
           <th data-sort="text">Team</th>
           <th data-sort="num">Rating</th>
+          <th data-sort="num">SOS</th>
           <th data-sort="num">Avg Wins</th>
           <th data-sort="num" class="sorted-desc" aria-sort="descending">Conf Title %</th>
           <th data-sort="num">CCG Apps</th>
@@ -185,6 +180,9 @@
           <td class="num" data-value="{{ t.baseline_fpi if t.baseline_fpi is not none else '' }}">
             {% if t.baseline_fpi is not none %}{{ "%.1f"|format(t.baseline_fpi) }}{% else %}—{% endif %}
           </td>
+          <td class="num" data-value="{{ t.sos if t.sos is not none else '' }}">
+            {% if t.sos is not none %}{{ "%+.1f"|format(t.sos) }}{% else %}—{% endif %}
+          </td>
           <td class="num" data-value="{{ t.avg_wins }}">{{ "%.2f"|format(t.avg_wins) }}</td>
           <td class="num" data-value="{{ t.conf_champ_odds_pct }}">{{ t.conf_champ_odds_pct }}%</td>
           <td class="num" data-value="{{ t.conf_champ_appearances }}">{{ t.conf_champ_appearances }}</td>
@@ -196,6 +194,12 @@
     </table>
     </div>
   </div>
+
+  {% if conference_summary %}
+  <div class="card conf-summary-card">
+    <p class="conf-summary">{{ conference_summary }}</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 {% block scripts %}

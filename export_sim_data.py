@@ -290,7 +290,7 @@ def build_conference_summary_text(
 
     playoff_share = float(deep.get("playoff_share_pct") or 0)
     title_top3_share = deep.get("title_top3_share_pct")
-    avg_sos = deep.get("avg_conf_opponent_fpi")
+    avg_sos = deep.get("avg_sos")
     top_title = max(teams, key=lambda t: float(t.get("title_odds_pct") or 0)) if teams else None
 
     if is_g6:
@@ -394,8 +394,8 @@ def build_conference_summary_text(
                 )
     if not is_g6 and avg_sos is not None:
         optional.append(
-            f"Conference play is demanding: average opponent rating in league games is "
-            f"{avg_sos:+.1f} in the model."
+            f"Schedules are demanding: member teams average {avg_sos:+.1f} strength of schedule "
+            f"in the model."
         )
 
     if teams:
@@ -706,13 +706,41 @@ def build_eligibility(elig_rows: list[dict], sim_cols: list[str], name_to_id: di
     return {"sim_count": len(sim_cols), "fields": fields}
 
 
-def build_field_analysis(fields: list[list[str]], id_to_name: dict, n_sims: int) -> dict:
+P4_CONFERENCES = {"SEC", "Big Ten", "ACC", "Big 12"}
+
+
+def build_field_analysis(
+    fields: list[list[str]],
+    id_to_name: dict,
+    n_sims: int,
+    conf_by_id: dict[str, str],
+) -> dict:
     team_freq: Counter[str] = Counter()
     pair_freq: Counter[tuple[str, str]] = Counter()
+    conf_slot_totals: Counter[str] = Counter()
+    conf_sims_with_member: Counter[str] = Counter()
+    g6_hist: Counter[str] = Counter()
+    p4_counts_per_sim: list[int] = []
 
     for field in fields:
+        confs_in_field: Counter[str] = Counter()
+        g6_count = 0
+        p4_count = 0
         for tid in field:
             team_freq[tid] += 1
+            conf = conf_by_id.get(tid, "")
+            if conf:
+                confs_in_field[conf] += 1
+                if conf in GROUP_OF_6:
+                    g6_count += 1
+                if conf in P4_CONFERENCES:
+                    p4_count += 1
+        p4_counts_per_sim.append(p4_count)
+        g6_key = "2+" if g6_count >= 2 else str(g6_count)
+        g6_hist[g6_key] += 1
+        for conf in confs_in_field:
+            conf_slot_totals[conf] += confs_in_field[conf]
+            conf_sims_with_member[conf] += 1
         for a, b in combinations(sorted(field), 2):
             pair_freq[(a, b)] += 1
 
@@ -720,6 +748,7 @@ def build_field_analysis(fields: list[list[str]], id_to_name: dict, n_sims: int)
         return {
             "team_id": tid,
             "team_name": id_to_name.get(tid, tid),
+            "conference": conf_by_id.get(tid, ""),
             "count": count,
             "pct": round(count / n_sims * 100, 2),
         }
@@ -731,10 +760,34 @@ def build_field_analysis(fields: list[list[str]], id_to_name: dict, n_sims: int)
             {
                 "team_a_id": a,
                 "team_a_name": id_to_name.get(a, a),
+                "team_a_conference": conf_by_id.get(a, ""),
                 "team_b_id": b,
                 "team_b_name": id_to_name.get(b, b),
+                "team_b_conference": conf_by_id.get(b, ""),
                 "count": c,
                 "pct": round(c / n_sims * 100, 2),
+            }
+        )
+
+    bubble_teams = [
+        team_entry(tid, c)
+        for tid, c in team_freq.items()
+        if 15 <= c / n_sims * 100 <= 30
+    ]
+    bubble_teams.sort(key=lambda t: -t["pct"])
+    bubble_teams = bubble_teams[:12]
+
+    conference_representation = []
+    for conf in sorted(conf_slot_totals.keys(), key=lambda c: (-conf_slot_totals[c], c)):
+        if not is_fbs_conference(conf):
+            continue
+        conference_representation.append(
+            {
+                "conference": conf,
+                "avg_teams_in_field": round(conf_slot_totals[conf] / n_sims, 2) if n_sims else 0,
+                "pct_sims_with_member": round(conf_sims_with_member[conf] / n_sims * 100, 1)
+                if n_sims
+                else 0,
             }
         )
 
@@ -750,23 +803,78 @@ def build_field_analysis(fields: list[list[str]], id_to_name: dict, n_sims: int)
     if best_overlap[0] > 0:
         i, j = best_overlap[1], best_overlap[2]
         shared = sorted(field_sets[i] & field_sets[j])
+        only_a = sorted(field_sets[i] - field_sets[j])
+        only_b = sorted(field_sets[j] - field_sets[i])
         closest = {
             "sim_a": i + 1,
             "sim_b": j + 1,
             "shared_count": best_overlap[0],
             "shared_team_ids": list(shared),
             "shared_team_names": [id_to_name.get(t, t) for t in shared],
-            "only_a_ids": sorted(field_sets[i] - field_sets[j]),
-            "only_b_ids": sorted(field_sets[j] - field_sets[i]),
+            "only_a_ids": only_a,
+            "only_a_names": [id_to_name.get(t, t) for t in only_a],
+            "only_b_ids": only_b,
+            "only_b_names": [id_to_name.get(t, t) for t in only_b],
         }
 
     unique_fields = len(set(tuple(f) for f in fields))
+    g6_sims_with_member = g6_hist.get("1", 0) + g6_hist.get("2+", 0)
     return {
         "unique_field_count": unique_fields,
         "top_teams": top_teams,
         "top_pairs": top_pairs,
         "closest_fields": closest,
+        "conference_representation": conference_representation,
+        "g6_in_field": {
+            "0": g6_hist.get("0", 0),
+            "1": g6_hist.get("1", 0),
+            "2+": g6_hist.get("2+", 0),
+        },
+        "pct_sims_with_g6": round(g6_sims_with_member / n_sims * 100, 1) if n_sims else 0,
+        "p4_avg_teams_in_field": round(sum(p4_counts_per_sim) / len(p4_counts_per_sim), 2)
+        if p4_counts_per_sim
+        else 0,
+        "bubble_teams": bubble_teams,
     }
+
+
+def home_field_adjustment(neutral_site: str, home_away: str) -> float:
+    n = str(neutral_site or "").strip().lower()
+    if n in ("true", "1", "yes"):
+        return 0.0
+    if home_away == "home":
+        return 3.0
+    if home_away == "away":
+        return -3.0
+    return 0.0
+
+
+def build_team_sos(full_schedule: list[dict]) -> dict[str, float]:
+    """Per-team SOS: mean opponent Rating adjusted for home/away (+3 home, -3 away)."""
+    by_team: dict[str, list[float]] = {}
+    for row in full_schedule:
+        tid = row.get("team_id", "")
+        opp_fpi = row.get("opponent_fpi")
+        if not tid or opp_fpi is None:
+            continue
+        hfa = home_field_adjustment(row.get("neutral_site", ""), row.get("home_away", ""))
+        by_team.setdefault(tid, []).append(float(opp_fpi) - hfa)
+    return {tid: round(sum(vals) / len(vals), 2) for tid, vals in by_team.items() if vals}
+
+
+def merge_team_sos(
+    teams: list[dict],
+    leaderboard: list[dict],
+    sos_by_id: dict[str, float],
+) -> None:
+    for team in teams:
+        sos = sos_by_id.get(team["team_id"])
+        if sos is not None:
+            team["sos"] = sos
+    for row in leaderboard:
+        tid = row.get("team_id")
+        if tid and tid in sos_by_id:
+            row["sos"] = sos_by_id[tid]
 
 
 def build_schedule(
@@ -774,16 +882,16 @@ def build_schedule(
     sim_cols: list[str],
     margin_by_game_team: dict[tuple[str, str], float],
     conf_by_id: dict[str, str],
-) -> list[dict]:
+) -> tuple[list[dict], list[dict]]:
     n = len(sim_cols)
-    schedule = []
+    full_schedule = []
     for row in game_rows:
         gid = row.get("game_id", "")
         tid = row.get("team_id", "")
         wins = sum(1 for c in sim_cols if row.get(c) == "1")
         win_pct = round(wins / n * 100, 2) if n else 0
         margin = margin_by_game_team.get((gid, tid))
-        schedule.append(
+        full_schedule.append(
             {
                 "game_id": gid,
                 "game_date": (row.get("game_date_utc") or "")[:10],
@@ -802,7 +910,7 @@ def build_schedule(
                 "avg_margin": round(margin, 3) if margin is not None else None,
             }
         )
-    return dedupe_schedule(schedule)
+    return full_schedule, dedupe_schedule(full_schedule)
 
 
 def dedupe_schedule(schedule: list[dict]) -> list[dict]:
@@ -965,6 +1073,7 @@ def build_conferences(teams: list[dict], leaderboard: list[dict], fields: list[l
                             ),
                             "eligibility_pct": lb_by_id.get(m["team_id"], {}).get("eligibility_pct", 0),
                             "playoff_appearances": lb_by_id.get(m["team_id"], {}).get("playoff_appearances", 0),
+                            "sos": lb_by_id.get(m["team_id"], {}).get("sos"),
                         }
                         for m in members
                     ],
@@ -980,24 +1089,10 @@ def build_conference_deep(
     champions_by_sim: list[dict[str, str]],
     finalists_by_sim: list[dict[str, list[str]]],
     fields: list[list[str]],
-    conf_by_id: dict[str, str],
     id_to_name: dict[str, str],
     n_sims: int,
-    schedule: list[dict],
 ) -> dict[str, dict]:
     """Per-conference rollups for detail pages and charts."""
-    conf_sos: dict[str, list[float]] = {}
-    for row in schedule:
-        tid = row.get("team_id", "")
-        oid = row.get("opponent_id", "")
-        t_conf = conf_by_id.get(tid, "")
-        o_conf = conf_by_id.get(oid, "")
-        if not t_conf or t_conf != o_conf or t_conf == FBS_INDEP:
-            continue
-        opp_fpi = row.get("opponent_fpi")
-        if opp_fpi is not None:
-            conf_sos.setdefault(t_conf, []).append(float(opp_fpi))
-
     deep: dict[str, dict] = {}
     for conf_row in conferences:
         conf = conf_row["conference"]
@@ -1037,7 +1132,7 @@ def build_conference_deep(
         title_pcts = [t.get("title_odds_pct", 0) for t in conf_row["teams"]]
         title_total = sum(title_pcts)
         top3 = sum(sorted(title_pcts, reverse=True)[:3])
-        sos_vals = conf_sos.get(conf, [])
+        sos_vals = [t["sos"] for t in conf_row["teams"] if t.get("sos") is not None]
         field_apps = sum(t.get("playoff_appearances", 0) for t in conf_row["teams"])
         member_slots = len(team_ids) * n_sims if n_sims else 1
 
@@ -1049,7 +1144,7 @@ def build_conference_deep(
             },
             "playoff_share_pct": round(field_apps / member_slots * 100, 2),
             "title_top3_share_pct": round(top3 / title_total * 100, 1) if title_total else 0,
-            "avg_conf_opponent_fpi": round(sum(sos_vals) / len(sos_vals), 2) if sos_vals else None,
+            "avg_sos": round(sum(sos_vals) / len(sos_vals), 2) if sos_vals else None,
         }
     return deep
 
@@ -1357,12 +1452,13 @@ def main() -> int:
 
     _, elig_rows = read_csv(SOURCES["elig"])
     eligibility = build_eligibility(elig_rows, sim_cols, name_to_id)
-    field_analysis = build_field_analysis(eligibility["fields"], id_to_name, n_sims)
+    field_analysis = build_field_analysis(eligibility["fields"], id_to_name, n_sims, conf_by_id)
 
     _, game_rows = read_csv(SOURCES["games_sim"])
     margin_lists = load_margin_lists(SOURCES["games_fpi"], sim_cols)
     margin_map = load_avg_margins(margin_lists)
-    schedule = build_schedule(game_rows, sim_cols, margin_map, conf_by_id)
+    full_schedule, schedule = build_schedule(game_rows, sim_cols, margin_map, conf_by_id)
+    merge_team_sos(teams, leaderboard, build_team_sos(full_schedule))
     conferences = build_conferences(teams, leaderboard, eligibility["fields"], n_sims)
     games = build_games(schedule, conf_by_id, margin_lists)
     game_slugs = build_game_slugs(games)
@@ -1373,10 +1469,8 @@ def main() -> int:
         conf_championship["champions_by_sim"],
         conf_championship["finalists_by_sim"],
         eligibility["fields"],
-        conf_by_id,
         id_to_name,
         n_sims,
-        schedule,
     )
 
     season_year = 2026
