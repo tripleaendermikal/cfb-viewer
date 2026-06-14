@@ -14,6 +14,7 @@ from pathlib import Path
 
 SIM_COL_PATTERN = re.compile(r"^sim_\d+$")
 GROUP_OF_6 = {"American", "Pac-12", "Sun Belt", "CUSA", "Mountain West", "MAC"}
+FBS_INDEP = "FBS Indep."
 DEFAULT_SIGMA = 10.0
 FPI_MIN = -40.0
 FPI_MAX = 40.0
@@ -377,11 +378,17 @@ def build_conferences(teams: list[dict], leaderboard: list[dict], fields: list[l
         conf_champ_sum = sum(
             lb_by_id.get(m["team_id"], {}).get("conf_champ_odds_pct", 0) for m in members
         )
-        conf_favorite = max(
-            members,
-            key=lambda m: lb_by_id.get(m["team_id"], {}).get("conf_champ_odds_pct", 0),
-        )
-        fav_lb = lb_by_id.get(conf_favorite["team_id"], {})
+        if conf == FBS_INDEP:
+            conf_favorite_name = None
+            conf_favorite_odds_pct = None
+        else:
+            conf_favorite = max(
+                members,
+                key=lambda m: lb_by_id.get(m["team_id"], {}).get("conf_champ_odds_pct", 0),
+            )
+            fav_lb = lb_by_id.get(conf_favorite["team_id"], {})
+            conf_favorite_name = conf_favorite["team_name"]
+            conf_favorite_odds_pct = fav_lb.get("conf_champ_odds_pct", 0)
         out.append(
             {
                 "conference": conf,
@@ -389,8 +396,8 @@ def build_conferences(teams: list[dict], leaderboard: list[dict], fields: list[l
                 "is_group_of_6": conf in GROUP_OF_6,
                 "total_title_odds_pct": round(title_sum, 2),
                 "total_conf_champ_odds_pct": round(conf_champ_sum, 2),
-                "conf_favorite_name": conf_favorite["team_name"],
-                "conf_favorite_odds_pct": fav_lb.get("conf_champ_odds_pct", 0),
+                "conf_favorite_name": conf_favorite_name,
+                "conf_favorite_odds_pct": conf_favorite_odds_pct,
                 "total_playoff_appearances": playoff_apps,
                 "sims_with_member": conf_fields_with_member,
                 "sims_with_member_pct": round(conf_fields_with_member / n_sims * 100, 2) if n_sims else 0,

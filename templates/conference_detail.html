@@ -13,12 +13,14 @@
     <div class="stat-label">Total Title Odds</div>
     <div class="stat-value">{{ conf.total_title_odds_pct }}%</div>
   </div>
+  {% if conf.conf_favorite_name %}
   <div class="card">
     <div class="stat-label">Conf Favorite</div>
     <div class="stat-value" style="font-size:1.1rem;">
       {{ conf.conf_favorite_name }} ({{ conf.conf_favorite_odds_pct }}%)
     </div>
   </div>
+  {% endif %}
   <div class="card">
     <div class="stat-label">Playoff Appearances</div>
     <div class="stat-value">{{ conf.total_playoff_appearances }}</div>
