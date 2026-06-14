@@ -35,8 +35,9 @@
     </div>
     {% if deep.title_top3_share_pct is not none %}
     <div class="card conf-accent-card">
-      <div class="stat-label">Top 3 Title Share</div>
+      <div class="stat-label">Title Odds Concentration</div>
       <div class="stat-value">{{ deep.title_top3_share_pct }}%</div>
+      <div class="muted" style="font-size:0.8rem;">Top 3 teams' share of this conference's title odds</div>
     </div>
     {% endif %}
     {% if deep.avg_conf_opponent_fpi is not none %}
