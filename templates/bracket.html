@@ -32,7 +32,7 @@
         <li>
           <span class="seed-num">{{ s.seed }}</span>
           <a href="{{ url_for('team_detail', team_id=s.team_id) }}">{{ s.team_name }}</a>
-          <span class="muted">FPI {{ s.fpi }}</span>
+          <span class="muted">Rating {{ s.fpi }}</span>
         </li>
         {% endfor %}
       </ul>
@@ -57,7 +57,7 @@
       <h3>All seeds</h3>
       <table class="data-table compact-table">
         <thead>
-          <tr><th>Seed</th><th>Team</th><th>FPI</th><th>Title % (this sim)</th></tr>
+          <tr><th>Seed</th><th>Team</th><th>Rating</th><th>Title % (this sim)</th></tr>
         </thead>
         <tbody>
           {% for s in sim_bracket.seeds %}

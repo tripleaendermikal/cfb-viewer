@@ -31,7 +31,7 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 | File | Contents | Loaded at startup |
 |------|----------|-------------------|
 | `meta.json` | Season, sim count, export time | Yes |
-| `leaderboard.json` | Title odds, playoff odds, conf title, FPI | Yes |
+| `leaderboard.json` | Title odds, playoff odds, conf title, Rating | Yes |
 | `teams.json` | Win histograms and avg wins | Yes |
 | `eligibility.json` | `{ sim_count }` only | Yes |
 | `field_analysis.json` | Top teams, pairs, closest fields | Yes |
