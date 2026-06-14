@@ -33,17 +33,47 @@
     <div class="stat-label">Avg Wins</div>
     <div class="stat-value">{{ "%.2f"|format(team.avg_wins or 0) }}</div>
   </div>
-  {% if team.conference != 'FBS Indep.' and team.ccg_appearances %}
-  <div class="card">
-    <div class="stat-label">CCG Record</div>
-    <div class="stat-value" style="font-size:1.1rem;">{{ team.ccg_wins }}-{{ team.ccg_appearances - team.ccg_wins }} ({{ team.ccg_appearances }} apps)</div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;font-size:1.1rem;">Schedule</h2>
+  <p class="muted" style="margin-top:0;">Win % is the chance {{ team.team_name }} wins each game across {{ meta.sim_count }} simulations.</p>
+  {% if team_schedule %}
+  <div class="table-scroll">
+  <table class="data-table schedule-table">
+    <thead>
+      <tr>
+        <th data-sort="text">Date</th>
+        <th data-sort="num">Week</th>
+        <th data-sort="text">Opponent</th>
+        <th data-sort="text">Site</th>
+        <th data-sort="num">Win %</th>
+        <th data-sort="num">Avg Margin</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in team_schedule %}
+      <tr class="schedule-row" onclick="window.location='{{ url_for('game_detail', game_id=g.game_id) }}'">
+        <td data-value="{{ g.game_date }}">{{ g.game_date }}</td>
+        <td class="num" data-value="{{ g.week }}">{{ g.week }}</td>
+        <td data-value="{{ g.opponent_name }}">
+          <a href="{{ url_for('team_detail', team_id=g.opponent_id) }}" onclick="event.stopPropagation()">{{ g.opponent_name }}</a>
+          {% if g.is_conference_game %}<span class="badge" style="background:{{ team.conference | conf_color }};font-size:0.65rem;margin-left:0.25rem;">conf</span>{% endif %}
+        </td>
+        <td data-value="{{ g.home_away }}">
+          {% if g.home_away == 'home' %}Home{% elif g.home_away == 'away' %}Away{% else %}Neutral{% endif %}
+        </td>
+        <td class="num" data-value="{{ g.win_pct }}">{{ g.win_pct }}%</td>
+        <td class="num" data-value="{{ g.avg_margin if g.avg_margin is not none else '' }}">
+          {% if g.avg_margin is not none %}{{ "%.1f"|format(g.avg_margin) }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
   </div>
-  {% endif %}
-  {% if bracket_summary and bracket_summary.avg_seed is not none %}
-  <div class="card">
-    <div class="stat-label">Avg Playoff Seed</div>
-    <div class="stat-value">{{ bracket_summary.avg_seed }}</div>
-  </div>
+  {% else %}
+  <p class="muted">No schedule data available.</p>
   {% endif %}
 </div>
 

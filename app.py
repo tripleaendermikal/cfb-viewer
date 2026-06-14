@@ -241,6 +241,50 @@ class DataStore:
     def game_at(self, game_id: str) -> dict | None:
         return self.games.get(str(game_id))
 
+    def team_schedule(self, team_id: str) -> list[dict]:
+        """This team's games with win odds and home/away from their perspective."""
+        tid = str(team_id)
+        rows: list[dict] = []
+        for g in self.games.values():
+            gid = g.get("game_id", "")
+            neutral = g.get("neutral_site", False)
+            home_wp = g.get("home_win_pct")
+            margin = g.get("avg_margin")
+            if g.get("home_team_id") == tid:
+                rows.append(
+                    {
+                        "game_id": gid,
+                        "game_date": g.get("game_date", ""),
+                        "week": g.get("week"),
+                        "opponent_id": g.get("away_team_id", ""),
+                        "opponent_name": g.get("away_team_name", ""),
+                        "win_pct": home_wp,
+                        "avg_margin": margin,
+                        "home_away": "neutral" if neutral else "home",
+                        "is_conference_game": g.get("is_conference_game", False),
+                    }
+                )
+            elif g.get("away_team_id") == tid:
+                away_wp = round(100 - float(home_wp), 2) if home_wp is not None else None
+                away_margin = round(-float(margin), 3) if margin is not None else None
+                rows.append(
+                    {
+                        "game_id": gid,
+                        "game_date": g.get("game_date", ""),
+                        "week": g.get("week"),
+                        "opponent_id": g.get("home_team_id", ""),
+                        "opponent_name": g.get("home_team_name", ""),
+                        "win_pct": away_wp,
+                        "avg_margin": away_margin,
+                        "home_away": "neutral" if neutral else "away",
+                        "is_conference_game": g.get("is_conference_game", False),
+                    }
+                )
+        return sorted(
+            rows,
+            key=lambda r: (r.get("game_date", ""), r.get("week") or 0, r.get("game_id", "")),
+        )
+
     def conf_champs_at(self, sim_index: int) -> dict[str, dict] | None:
         data = self.sim_data_at(sim_index)
         if not data:
@@ -415,12 +459,14 @@ def create_app() -> Flask:
         merged["ccg_appearances"] = ccg.get("ccg_appearances", merged["conf_champ_appearances"])
         merged["ccg_wins"] = ccg.get("ccg_wins", 0)
         bracket_summary = store.brackets_summary.get("team_summary", {}).get(team_id)
+        team_schedule = store.team_schedule(team_id)
         hist_labels = [str(i) for i in range(13)]
         hist_data = [merged["win_histogram"].get(str(i), 0) for i in range(13)]
         return render_template(
             "team.html",
             team=merged,
             bracket_summary=bracket_summary,
+            team_schedule=team_schedule,
             hist_labels=hist_labels,
             hist_data=hist_data,
             active="team",
