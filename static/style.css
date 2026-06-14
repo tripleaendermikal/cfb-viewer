@@ -376,6 +376,83 @@ table.data-table.compact-table { font-size: 0.85rem; }
   font-size: 0.85rem;
 }
 
+.team-page {
+  --team-primary: #3d8bfd;
+  --team-alt: #555555;
+  --team-on-primary: #ffffff;
+}
+
+.team-hero {
+  background: var(--team-primary);
+  color: var(--team-on-primary);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.team-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.team-hero-logo {
+  height: 64px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.team-hero-text h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  color: var(--team-on-primary);
+}
+
+.team-hero-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--team-alt) 85%, var(--team-on-primary));
+  color: var(--team-on-primary);
+  border: 1px solid color-mix(in srgb, var(--team-on-primary) 25%, transparent);
+}
+
+.team-hero-links {
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+}
+
+.team-hero-links a {
+  color: var(--team-on-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.team-hero-links a:hover {
+  opacity: 0.85;
+}
+
+.team-page .card {
+  border-top: 3px solid var(--team-primary);
+}
+
+.team-page a:not(.team-hero-links a) {
+  color: var(--team-primary);
+}
+
+.team-page .stat-value {
+  color: color-mix(in srgb, var(--team-primary) 70%, var(--text));
+}
+
+.team-page .schedule-table tbody tr.schedule-row:hover {
+  background: color-mix(in srgb, var(--team-primary) 15%, transparent);
+}
+
 @media (max-width: 768px) {
   .navbar {
     flex-direction: column;
@@ -433,6 +510,20 @@ table.data-table.compact-table { font-size: 0.85rem; }
   .schedule-table tbody tr.schedule-row td {
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
+  }
+
+  .team-hero {
+    padding: 1.25rem 1rem;
+  }
+
+  .team-hero-main {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .team-hero-text h1 {
+    font-size: 1.5rem;
   }
 }
 

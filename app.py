@@ -41,6 +41,26 @@ CONFERENCE_COLORS = {
 }
 
 
+def contrasting_text(hex_color: str) -> str:
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return "#ffffff"
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    return "#0f1419" if luminance > 0.6 else "#ffffff"
+
+
+def build_team_theme(team: dict, conference: str) -> dict:
+    primary = team.get("primary_color") or CONFERENCE_COLORS.get(conference, "#555555")
+    alternate = team.get("alternate_color") or primary
+    return {
+        "primary": primary,
+        "alternate": alternate,
+        "logo_url": team.get("logo_url"),
+        "on_primary": contrasting_text(primary),
+    }
+
+
 class DataStore:
     def __init__(self, data_dir: Path) -> None:
         self._data_dir = data_dir
@@ -460,11 +480,14 @@ def create_app() -> Flask:
         merged["ccg_wins"] = ccg.get("ccg_wins", 0)
         bracket_summary = store.brackets_summary.get("team_summary", {}).get(team_id)
         team_schedule = store.team_schedule(team_id)
+        conference = merged.get("conference", "")
+        team_theme = build_team_theme(team, conference)
         hist_labels = [str(i) for i in range(13)]
         hist_data = [merged["win_histogram"].get(str(i), 0) for i in range(13)]
         return render_template(
             "team.html",
             team=merged,
+            team_theme=team_theme,
             bracket_summary=bracket_summary,
             team_schedule=team_schedule,
             hist_labels=hist_labels,

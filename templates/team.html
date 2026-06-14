@@ -4,17 +4,27 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 {% endblock %}
 {% block content %}
-<h1>{{ team.team_name }}</h1>
-<p class="subtitle">
-  {% if team.conference %}
-  <span class="badge" style="background:{{ team.conference | conf_color }}">{{ team.conference }}</span>
-  {% endif %}
-  <a href="{{ url_for('schedule', team=team.team_id) }}">View schedule</a>
-  · <a href="{{ url_for('compare', teams=team.team_id) }}">Compare</a>
-  {% if bracket_summary and bracket_summary.avg_seed is not none %}
-  · <a href="{{ url_for('bracket', team=team.team_id) }}">Bracket history</a>
-  {% endif %}
-</p>
+<div class="team-page" style="--team-primary: {{ team_theme.primary }}; --team-alt: {{ team_theme.alternate }}; --team-on-primary: {{ team_theme.on_primary }};">
+  <header class="team-hero">
+    <div class="team-hero-main">
+      {% if team_theme.logo_url %}
+      <img src="{{ team_theme.logo_url }}" alt="" class="team-hero-logo" width="64" height="64">
+      {% endif %}
+      <div class="team-hero-text">
+        <h1>{{ team.team_name }}</h1>
+        {% if team.conference %}
+        <span class="team-hero-badge">{{ team.conference }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <p class="team-hero-links">
+      <a href="{{ url_for('schedule', team=team.team_id) }}">View schedule</a>
+      · <a href="{{ url_for('compare', teams=team.team_id) }}">Compare</a>
+      {% if bracket_summary and bracket_summary.avg_seed is not none %}
+      · <a href="{{ url_for('bracket', team=team.team_id) }}">Bracket history</a>
+      {% endif %}
+    </p>
+  </header>
 
 <div class="card-grid">
   <div class="card">
@@ -83,9 +93,11 @@
     <canvas id="winChart"></canvas>
   </div>
 </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
+  const teamPrimary = {{ team_theme.primary | tojson }};
   new Chart(document.getElementById('winChart'), {
     type: 'bar',
     data: {
@@ -93,8 +105,8 @@
       datasets: [{
         label: 'Sim count',
         data: {{ hist_data | tojson }},
-        backgroundColor: '#3d8bfd99',
-        borderColor: '#3d8bfd',
+        backgroundColor: teamPrimary + '99',
+        borderColor: teamPrimary,
         borderWidth: 1
       }]
     },

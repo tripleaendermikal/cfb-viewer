@@ -6,7 +6,9 @@ from __future__ import annotations
 import csv
 import json
 import re
+import subprocess
 import sys
+import urllib.request
 from collections import Counter
 from datetime import datetime, timezone
 from itertools import combinations
@@ -20,6 +22,24 @@ FPI_MIN = -40.0
 FPI_MAX = 40.0
 FPI_MAX_GROUP_OF_6 = 27.0
 Z_90 = 1.645
+CONFERENCE_COLORS = {
+    "SEC": "#c41e3a",
+    "Big Ten": "#003366",
+    "Big 12": "#006747",
+    "ACC": "#013ca6",
+    "Pac-12": "#8c2332",
+    "American": "#c8102e",
+    "Mountain West": "#005eb8",
+    "Sun Belt": "#f15a22",
+    "MAC": "#006633",
+    "CUSA": "#00a3e0",
+    "FBS Indep.": "#555555",
+    "Unknown": "#666666",
+}
+ESPN_TEAMS_URL = (
+    "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams"
+)
+
 FCS_CONFERENCES = {
     "Big Sky",
     "CAA",
@@ -83,6 +103,73 @@ def write_json(path: Path, data: object) -> int:
     text = json.dumps(data, separators=(",", ":"))
     path.write_text(text, encoding="utf-8")
     return len(text.encode("utf-8"))
+
+
+def normalize_hex(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    h = str(raw).strip().lstrip("#").lower()
+    if len(h) == 6 and all(c in "0123456789abcdef" for c in h):
+        return f"#{h}"
+    return None
+
+
+def _fetch_json_url(url: str) -> dict:
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read().decode())
+    except Exception:
+        proc = subprocess.run(
+            ["curl", "-sS", "--compressed", "-H", "User-Agent: Mozilla/5.0", url],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr or f"curl failed: {proc.returncode}")
+        return json.loads(proc.stdout)
+
+
+def fetch_espn_team_branding() -> dict[str, dict]:
+    branding: dict[str, dict] = {}
+    offset = 0
+    limit = 1000
+    while True:
+        url = f"{ESPN_TEAMS_URL}?limit={limit}&offset={offset}"
+        data = _fetch_json_url(url)
+        teams = data["sports"][0]["leagues"][0].get("teams") or []
+        if not teams:
+            break
+        for entry in teams:
+            t = entry.get("team") or {}
+            tid = str(t.get("id", "")).strip()
+            if not tid:
+                continue
+            logos = t.get("logos") or []
+            logo_url = logos[0].get("href") if logos else None
+            branding[tid] = {
+                "primary_color": normalize_hex(t.get("color")),
+                "alternate_color": normalize_hex(t.get("alternateColor")),
+                "logo_url": logo_url,
+            }
+        if len(teams) < limit:
+            break
+        offset += limit
+    return branding
+
+
+def enrich_teams_branding(teams: list[dict], branding: dict[str, dict]) -> None:
+    for team in teams:
+        tid = team["team_id"]
+        conf = team.get("conference", "")
+        fb = branding.get(tid, {})
+        primary = fb.get("primary_color") or CONFERENCE_COLORS.get(conf, "#555555")
+        alternate = fb.get("alternate_color") or primary
+        team["primary_color"] = primary
+        team["alternate_color"] = alternate
+        team["logo_url"] = fb.get("logo_url")
 
 
 def build_teams(records_rows: list[dict], sim_cols: list[str]) -> list[dict]:
@@ -698,6 +785,13 @@ def main() -> int:
     n_sims = len(sim_cols)
 
     teams = build_teams(records_rows, sim_cols)
+    try:
+        branding = fetch_espn_team_branding()
+        enrich_teams_branding(teams, branding)
+        print(f"Merged ESPN branding for {len(branding)} teams")
+    except Exception as exc:
+        print(f"Warning: could not fetch ESPN team branding: {exc}", file=sys.stderr)
+        enrich_teams_branding(teams, {})
     name_to_id = {t["team_name"]: t["team_id"] for t in teams}
     id_to_name = {t["team_id"]: t["team_name"] for t in teams}
 
