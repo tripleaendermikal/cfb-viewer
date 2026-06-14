@@ -72,6 +72,71 @@ def build_team_theme(team: dict, conference: str) -> dict:
     }
 
 
+def enrich_conference_teams(conf: dict, store: "DataStore") -> list[dict]:
+    ccg = store.conf_championship_summary.get("team_summary", {})
+    bracket = store.brackets_summary.get("team_summary", {})
+    sim_count = store.sim_count
+    enriched = []
+    for t in conf["teams"]:
+        tid = t["team_id"]
+        lb = store.lb_by_id.get(tid, {})
+        ccg_t = ccg.get(tid, {})
+        br_t = bracket.get(tid, {})
+        apps = ccg_t.get("ccg_appearances", t.get("conf_champ_appearances", 0))
+        wins = ccg_t.get("ccg_wins", 0)
+        field_apps = br_t.get("field_appearances", lb.get("playoff_appearances", 0))
+        row = dict(t)
+        row["ccg_wins"] = wins
+        row["ccg_win_pct"] = round(wins / apps * 100, 1) if apps else None
+        row["playoff_appearances"] = field_apps
+        row["playoff_field_pct"] = round(field_apps / sim_count * 100, 1) if sim_count else 0
+        row["avg_seed"] = br_t.get("avg_seed")
+        row["baseline_fpi"] = lb.get("baseline_fpi")
+        row["fpi_ci_low"] = lb.get("fpi_ci_low")
+        row["fpi_ci_high"] = lb.get("fpi_ci_high")
+        row["conf_champ_game_win_pct"] = lb.get("conf_champ_game_win_pct", 0)
+        enriched.append(row)
+    return enriched
+
+
+def build_conf_sim_snapshot(store: "DataStore", conf: dict, sim_index: int) -> dict:
+    conf_name = conf["conference"]
+    team_ids = {t["team_id"] for t in conf["teams"]}
+    data = store.sim_data_at(sim_index)
+    if not data:
+        return {}
+    champ_id = (data.get("conf_champions") or {}).get(conf_name)
+    finalist_ids = (data.get("conf_finalists") or {}).get(conf_name, [])
+    seeds = (data.get("bracket") or {}).get("seeds", [])
+    seed_by_id = {s["team_id"]: s for s in seeds}
+    playoff_teams = []
+    for tid in data.get("field", []):
+        if tid not in team_ids:
+            continue
+        seed_row = seed_by_id.get(tid, {})
+        playoff_teams.append(
+            {
+                "team_id": tid,
+                "team_name": store.team_name(tid),
+                "seed": seed_row.get("seed"),
+                "fpi": seed_row.get("fpi"),
+            }
+        )
+    playoff_teams.sort(key=lambda r: (r["seed"] is None, r.get("seed") or 99))
+    return {
+        "champion": {
+            "team_id": champ_id,
+            "team_name": store.team_name(champ_id) if champ_id else None,
+        }
+        if champ_id
+        else None,
+        "finalists": [
+            {"team_id": tid, "team_name": store.team_name(tid)} for tid in finalist_ids
+        ],
+        "playoff_teams": playoff_teams,
+    }
+
+
 class DataStore:
     def __init__(self, data_dir: Path) -> None:
         self._data_dir = data_dir
@@ -92,6 +157,7 @@ class DataStore:
         self._last_year: dict | None = None
         self._brackets_summary: dict | None = None
         self._conf_championship_summary: dict | None = None
+        self._conference_deep: dict | None = None
         self._legacy_brackets: dict | None = None
         self._legacy_conf_championship: dict | None = None
         self._legacy_eligibility_fields: list | None = None
@@ -174,6 +240,13 @@ class DataStore:
             else:
                 self._conf_championship_summary = self._legacy_conf_championship_data()
         return self._conf_championship_summary
+
+    @property
+    def conference_deep(self) -> dict:
+        if self._conference_deep is None:
+            data = self._load_optional(self._data_dir / "conference_deep.json")
+            self._conference_deep = data if isinstance(data, dict) else {}
+        return self._conference_deep
 
     def _legacy_brackets_data(self) -> dict:
         if self._legacy_brackets is None:
@@ -663,9 +736,40 @@ def create_app() -> Flask:
             conf = next((c for c in store.conferences if c["conference"] == conf_name), None)
             if not conf:
                 abort(404)
+            conf = dict(conf)
+            conf["teams"] = enrich_conference_teams(conf, store)
+            deep = store.conference_deep.get(conf_name, {})
+            playoff_hist = deep.get("playoff_teams_per_sim", {})
+            playoff_hist_labels = list(playoff_hist.keys())
+            playoff_hist_data = [playoff_hist[k] for k in playoff_hist_labels]
+
+            sim_raw = request.args.get("sim", "").strip()
+            sim_index = None
+            sim_snapshot = None
+            sim_error = None
+            if sim_raw:
+                try:
+                    sim_index = int(sim_raw)
+                    if sim_index < 1 or sim_index > store.sim_count:
+                        sim_error = f"Sim index must be 1–{store.sim_count}"
+                    else:
+                        sim_snapshot = build_conf_sim_snapshot(store, conf, sim_index - 1)
+                        if not sim_snapshot:
+                            sim_error = "Sim data not available"
+                except ValueError:
+                    sim_error = "Invalid sim index"
+
             return render_template(
                 "conference_detail.html",
                 conf=conf,
+                deep=deep,
+                champion_chart=deep.get("champion_chart", []),
+                finalist_chart=deep.get("finalist_chart", []),
+                playoff_hist_labels=playoff_hist_labels,
+                playoff_hist_data=playoff_hist_data,
+                sim_index=sim_index,
+                sim_snapshot=sim_snapshot,
+                sim_error=sim_error,
                 active="conferences",
             )
         return render_template(

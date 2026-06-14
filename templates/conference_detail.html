@@ -1,56 +1,248 @@
 {% extends "base.html" %}
 {% block title %}{{ conf.conference }} — CFB Simulation Viewer{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
 {% block content %}
-<p><a href="{{ url_for('conferences') }}">← All conferences</a></p>
-<h1>{{ conf.conference }}</h1>
-<p class="subtitle">
-  {% if conf.is_group_of_6 %}Group of 6 · {% endif %}
-  {{ conf.team_count }} teams · {{ conf.sims_with_member_pct }}% of sims include a member
-</p>
+<div class="conf-page" style="--conf-color: {{ conf.conference | conf_color }};">
+  <p><a href="{{ url_for('conferences') }}">← All conferences</a></p>
 
-<div class="card-grid">
-  <div class="card">
-    <div class="stat-label">Total Title Odds</div>
-    <div class="stat-value">{{ conf.total_title_odds_pct }}%</div>
+  <header class="conf-hero">
+    <h1><span class="badge conf-hero-badge">{{ conf.conference }}</span></h1>
+    <p class="subtitle conf-hero-sub">
+      {% if conf.is_group_of_6 %}Group of 6 · {% endif %}
+      {{ conf.team_count }} teams · {{ conf.sims_with_member_pct }}% of sims include a member
+    </p>
+  </header>
+
+  <div class="card-grid">
+    <div class="card conf-accent-card">
+      <div class="stat-label">Total Title Odds</div>
+      <div class="stat-value">{{ conf.total_title_odds_pct }}%</div>
+    </div>
+    {% if conf.conf_favorite_name %}
+    <div class="card conf-accent-card">
+      <div class="stat-label">Conf Favorite</div>
+      <div class="stat-value" style="font-size:1.1rem;">
+        {{ conf.conf_favorite_name }} ({{ conf.conf_favorite_odds_pct }}%)
+      </div>
+    </div>
+    {% endif %}
+    <div class="card conf-accent-card">
+      <div class="stat-label">Playoff Share</div>
+      <div class="stat-value">{{ deep.playoff_share_pct or 0 }}%</div>
+      <div class="muted" style="font-size:0.8rem;">Member slots in playoff field</div>
+    </div>
+    {% if deep.title_top3_share_pct is not none %}
+    <div class="card conf-accent-card">
+      <div class="stat-label">Top 3 Title Share</div>
+      <div class="stat-value">{{ deep.title_top3_share_pct }}%</div>
+    </div>
+    {% endif %}
+    {% if deep.avg_conf_opponent_fpi is not none %}
+    <div class="card conf-accent-card">
+      <div class="stat-label">Avg Conf Opponent Rating</div>
+      <div class="stat-value">{{ "%.1f"|format(deep.avg_conf_opponent_fpi) }}</div>
+    </div>
+    {% endif %}
   </div>
-  {% if conf.conf_favorite_name %}
-  <div class="card">
-    <div class="stat-label">Conf Favorite</div>
-    <div class="stat-value" style="font-size:1.1rem;">
-      {{ conf.conf_favorite_name }} ({{ conf.conf_favorite_odds_pct }}%)
+
+  <div class="card field-lookup conf-sim-lookup">
+    <h2 style="margin-top:0;font-size:1.1rem;">Sim lookup</h2>
+    <form class="filters" method="get">
+      <input type="hidden" name="conference" value="{{ conf.conference }}">
+      <label>
+        Simulation #
+        <input type="number" name="sim" min="1" max="{{ meta.sim_count }}" value="{{ sim_index or '' }}" placeholder="1–{{ meta.sim_count }}">
+      </label>
+      <button type="submit" class="btn">Look up</button>
+    </form>
+    {% if sim_error %}
+    <p class="error">{{ sim_error }}</p>
+    {% elif sim_snapshot %}
+    <div class="conf-sim-result">
+      {% if sim_snapshot.champion %}
+      <p><strong>Conf champion:</strong>
+        <a href="{{ url_for('team_detail', team_id=sim_snapshot.champion.team_id) }}">{{ sim_snapshot.champion.team_name }}</a>
+      </p>
+      {% endif %}
+      {% if sim_snapshot.finalists %}
+      <p><strong>CCG finalists:</strong>
+        {% for f in sim_snapshot.finalists %}
+        <a href="{{ url_for('team_detail', team_id=f.team_id) }}">{{ f.team_name }}</a>{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      </p>
+      {% endif %}
+      {% if sim_snapshot.playoff_teams %}
+      <p style="margin-bottom:0.35rem;"><strong>Playoff teams from {{ conf.conference }}:</strong></p>
+      <ul class="conf-sim-playoff-list">
+        {% for t in sim_snapshot.playoff_teams %}
+        <li>
+          {% if t.seed %}#{{ t.seed }}{% else %}—{% endif %}
+          <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+          {% if t.fpi is not none %}<span class="muted">({{ "%.1f"|format(t.fpi) }})</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% elif sim_snapshot.champion or sim_snapshot.finalists %}
+      <p class="muted">No member in the playoff field this sim.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if champion_chart or finalist_chart %}
+  <div class="conf-charts-grid">
+    {% if champion_chart %}
+    <div class="card conf-accent-card">
+      <h2 style="margin-top:0;font-size:1.1rem;">Who wins {{ conf.conference }}?</h2>
+      <div class="chart-wrap">
+        <canvas id="champChart"></canvas>
+      </div>
+    </div>
+    {% endif %}
+    {% if finalist_chart %}
+    <div class="card conf-accent-card">
+      <h2 style="margin-top:0;font-size:1.1rem;">CCG finalists</h2>
+      <div class="chart-wrap">
+        <canvas id="finalistChart"></canvas>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if playoff_hist_labels %}
+  <div class="card conf-accent-card">
+    <h2 style="margin-top:0;font-size:1.1rem;">Playoff teams per sim</h2>
+    <p class="muted" style="margin-top:0;">How many {{ conf.conference }} teams make the 12-team field.</p>
+    <div class="chart-wrap">
+      <canvas id="playoffCountChart"></canvas>
     </div>
   </div>
   {% endif %}
-  <div class="card">
-    <div class="stat-label">Sims with Member</div>
-    <div class="stat-value">{{ conf.sims_with_member }}</div>
+
+  <div class="card conf-accent-card">
+    <h2 style="margin-top:0;font-size:1.1rem;">Teams</h2>
+    <div class="table-scroll">
+    <table class="data-table compact-table">
+      <thead>
+        <tr>
+          <th data-sort="text">Team</th>
+          <th data-sort="num">Rating</th>
+          <th data-sort="num">Avg Wins</th>
+          <th data-sort="num">Conf Title %</th>
+          <th data-sort="num">CCG Apps</th>
+          <th data-sort="num">CCG Win %</th>
+          <th data-sort="num">CCG Game Win %</th>
+          <th data-sort="num">Playoff %</th>
+          <th data-sort="num">Avg Seed</th>
+          <th data-sort="num">Title Odds</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in conf.teams %}
+        <tr>
+          <td data-value="{{ t.team_name }}">
+            <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
+          </td>
+          <td class="num" data-value="{{ t.baseline_fpi if t.baseline_fpi is not none else '' }}">
+            {% if t.baseline_fpi is not none %}{{ "%.1f"|format(t.baseline_fpi) }}{% else %}—{% endif %}
+          </td>
+          <td class="num" data-value="{{ t.avg_wins }}">{{ "%.2f"|format(t.avg_wins) }}</td>
+          <td class="num" data-value="{{ t.conf_champ_odds_pct }}">{{ t.conf_champ_odds_pct }}%</td>
+          <td class="num" data-value="{{ t.conf_champ_appearances }}">{{ t.conf_champ_appearances }}</td>
+          <td class="num" data-value="{{ t.ccg_win_pct if t.ccg_win_pct is not none else '' }}">
+            {% if t.ccg_win_pct is not none %}{{ t.ccg_win_pct }}%{% else %}—{% endif %}
+          </td>
+          <td class="num" data-value="{{ t.conf_champ_game_win_pct }}">{{ t.conf_champ_game_win_pct }}%</td>
+          <td class="num" data-value="{{ t.playoff_field_pct }}">{{ t.playoff_field_pct }}%</td>
+          <td class="num" data-value="{{ t.avg_seed if t.avg_seed is not none else '' }}">
+            {% if t.avg_seed is not none %}{{ "%.2f"|format(t.avg_seed) }}{% else %}—{% endif %}
+          </td>
+          <td class="num" data-value="{{ t.title_odds_pct }}">{{ t.title_odds_pct }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
   </div>
 </div>
-
-<table class="data-table">
-  <thead>
-    <tr>
-      <th data-sort="text">Team</th>
-      <th data-sort="num">Avg Wins</th>
-      <th data-sort="num">Conf Title %</th>
-      <th data-sort="num">CCG Apps</th>
-      <th data-sort="num">Title Odds</th>
-      <th data-sort="num">Playoff Odds</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for t in conf.teams %}
-    <tr>
-      <td data-value="{{ t.team_name }}">
-        <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
-      </td>
-      <td class="num" data-value="{{ t.avg_wins }}">{{ "%.2f"|format(t.avg_wins) }}</td>
-      <td class="num" data-value="{{ t.conf_champ_odds_pct }}">{{ t.conf_champ_odds_pct }}%</td>
-      <td class="num" data-value="{{ t.conf_champ_appearances }}">{{ t.conf_champ_appearances }}</td>
-      <td class="num" data-value="{{ t.title_odds_pct }}">{{ t.title_odds_pct }}%</td>
-      <td class="num" data-value="{{ t.eligibility_pct }}">{{ t.eligibility_pct }}%</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% endblock %}
+{% block scripts %}
+{% if champion_chart or finalist_chart or playoff_hist_labels %}
+<script>
+  const confColor = {{ (conf.conference | conf_color) | tojson }};
+  const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, title: { display: true, text: 'Simulations' } } }
+  };
+  {% if champion_chart %}
+  new Chart(document.getElementById('champChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ champion_chart | map(attribute='team_name') | list | tojson }},
+      datasets: [{
+        data: {{ champion_chart | map(attribute='count') | list | tojson }},
+        backgroundColor: confColor + '99',
+        borderColor: confColor,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      ...chartOpts,
+      scales: {
+        ...chartOpts.scales,
+        x: { ticks: { maxRotation: 45, minRotation: 45 } }
+      }
+    }
+  });
+  {% endif %}
+  {% if finalist_chart %}
+  new Chart(document.getElementById('finalistChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ finalist_chart | map(attribute='team_name') | list | tojson }},
+      datasets: [{
+        data: {{ finalist_chart | map(attribute='count') | list | tojson }},
+        backgroundColor: confColor + '66',
+        borderColor: confColor,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      ...chartOpts,
+      scales: {
+        ...chartOpts.scales,
+        x: { ticks: { maxRotation: 45, minRotation: 45 } }
+      }
+    }
+  });
+  {% endif %}
+  {% if playoff_hist_labels %}
+  new Chart(document.getElementById('playoffCountChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ playoff_hist_labels | tojson }},
+      datasets: [{
+        label: 'Sims',
+        data: {{ playoff_hist_data | tojson }},
+        backgroundColor: confColor + '99',
+        borderColor: confColor,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      ...chartOpts,
+      scales: {
+        x: { title: { display: true, text: 'Teams in playoff field' } },
+        y: chartOpts.scales.y
+      }
+    }
+  });
+  {% endif %}
+</script>
+{% endif %}
 {% endblock %}

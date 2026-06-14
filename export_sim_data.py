@@ -580,6 +580,85 @@ def build_conferences(teams: list[dict], leaderboard: list[dict], fields: list[l
     return out
 
 
+def build_conference_deep(
+    conferences: list[dict],
+    champions_by_sim: list[dict[str, str]],
+    finalists_by_sim: list[dict[str, list[str]]],
+    fields: list[list[str]],
+    conf_by_id: dict[str, str],
+    id_to_name: dict[str, str],
+    n_sims: int,
+    schedule: list[dict],
+) -> dict[str, dict]:
+    """Per-conference rollups for detail pages and charts."""
+    conf_sos: dict[str, list[float]] = {}
+    for row in schedule:
+        tid = row.get("team_id", "")
+        oid = row.get("opponent_id", "")
+        t_conf = conf_by_id.get(tid, "")
+        o_conf = conf_by_id.get(oid, "")
+        if not t_conf or t_conf != o_conf or t_conf == FBS_INDEP:
+            continue
+        opp_fpi = row.get("opponent_fpi")
+        if opp_fpi is not None:
+            conf_sos.setdefault(t_conf, []).append(float(opp_fpi))
+
+    deep: dict[str, dict] = {}
+    for conf_row in conferences:
+        conf = conf_row["conference"]
+        if conf == FBS_INDEP:
+            continue
+        team_ids = {t["team_id"] for t in conf_row["teams"]}
+        champ_counts: Counter[str] = Counter()
+        finalist_counts: Counter[str] = Counter()
+        playoff_per_sim: Counter[int] = Counter()
+
+        for sim_champs in champions_by_sim:
+            champ_id = sim_champs.get(conf)
+            if champ_id:
+                champ_counts[champ_id] += 1
+
+        for sim_finals in finalists_by_sim:
+            for tid in sim_finals.get(conf, []):
+                finalist_counts[tid] += 1
+
+        for field in fields:
+            n_in_conf = sum(1 for tid in field if tid in team_ids)
+            playoff_per_sim[n_in_conf] += 1
+
+        def team_chart(counter: Counter[str]) -> list[dict]:
+            items = []
+            for tid, count in counter.most_common():
+                items.append(
+                    {
+                        "team_id": tid,
+                        "team_name": id_to_name.get(tid, tid),
+                        "count": count,
+                        "pct": round(count / n_sims * 100, 2) if n_sims else 0,
+                    }
+                )
+            return items
+
+        title_pcts = [t.get("title_odds_pct", 0) for t in conf_row["teams"]]
+        title_total = sum(title_pcts)
+        top3 = sum(sorted(title_pcts, reverse=True)[:3])
+        sos_vals = conf_sos.get(conf, [])
+        field_apps = sum(t.get("playoff_appearances", 0) for t in conf_row["teams"])
+        member_slots = len(team_ids) * n_sims if n_sims else 1
+
+        deep[conf] = {
+            "champion_chart": team_chart(champ_counts),
+            "finalist_chart": team_chart(finalist_counts),
+            "playoff_teams_per_sim": {
+                str(k): playoff_per_sim[k] for k in sorted(playoff_per_sim.keys())
+            },
+            "playoff_share_pct": round(field_apps / member_slots * 100, 2),
+            "title_top3_share_pct": round(top3 / title_total * 100, 1) if title_total else 0,
+            "avg_conf_opponent_fpi": round(sum(sos_vals) / len(sos_vals), 2) if sos_vals else None,
+        }
+    return deep
+
+
 def load_fbs_team_ids(conferences_path: Path) -> set[str]:
     _, rows = read_csv(conferences_path)
     return {
@@ -894,6 +973,16 @@ def main() -> int:
     game_slugs = build_game_slugs(games)
     conf_championship = build_conf_championship(sim_cols, id_to_name)
     brackets = build_brackets(eligibility, sim_cols, name_to_id, id_to_name, leaderboard)
+    conference_deep = build_conference_deep(
+        conferences,
+        conf_championship["champions_by_sim"],
+        conf_championship["finalists_by_sim"],
+        eligibility["fields"],
+        conf_by_id,
+        id_to_name,
+        n_sims,
+        schedule,
+    )
 
     brackets_summary = {
         "sim_count": n_sims,
@@ -934,6 +1023,7 @@ def main() -> int:
         ("field_analysis.json", field_analysis),
         ("schedule.json", schedule),
         ("conferences.json", conferences),
+        ("conference_deep.json", conference_deep),
         ("games.json", games),
         ("game_slugs.json", game_slugs),
         ("brackets_summary.json", brackets_summary),

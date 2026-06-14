@@ -759,6 +759,57 @@ table.data-table.compact-table { font-size: 0.85rem; }
   }
 }
 
+.conf-page {
+  --conf-color: #555555;
+}
+
+.conf-hero {
+  margin-bottom: 1.25rem;
+}
+
+.conf-hero h1 {
+  margin: 0 0 0.35rem;
+}
+
+.conf-hero-badge {
+  font-size: 1.25rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.conf-hero-sub {
+  margin: 0;
+}
+
+.conf-accent-card {
+  border-top: 3px solid var(--conf-color);
+}
+
+.conf-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.conf-sim-lookup {
+  margin-bottom: 1rem;
+}
+
+.conf-sim-result {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.conf-sim-playoff-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.conf-sim-playoff-list li {
+  margin: 0.25rem 0;
+}
+
 @media (max-width: 640px) {
   .navbar .meta { margin-left: 0; width: 100%; }
 }
