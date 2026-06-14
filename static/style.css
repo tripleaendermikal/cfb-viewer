@@ -487,6 +487,156 @@ table.data-table.compact-table { font-size: 0.85rem; }
   background: color-mix(in srgb, var(--team-primary) 15%, transparent);
 }
 
+/* Season preview page */
+.season-page {
+  max-width: 52rem;
+}
+
+.season-hero {
+  margin-bottom: 1.5rem;
+}
+
+.season-hero h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.85rem;
+}
+
+.season-hero-sub {
+  margin: 0 0 1rem;
+}
+
+.season-logo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.season-logo-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  background: var(--surface2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  transition: transform 0.15s ease;
+}
+
+.season-logo-item:hover {
+  transform: translateY(-2px);
+}
+
+.season-logo-item img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.season-logo-fallback {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.season-section {
+  margin-bottom: 1.25rem;
+}
+
+.season-section-heading {
+  font-size: 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.featured-team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.featured-team-card {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem;
+  background: var(--surface2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.featured-team-card:hover {
+  border-color: #4a9eff;
+}
+
+.featured-team-logo {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.featured-team-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.featured-team-stat {
+  color: var(--text);
+}
+
+.featured-team-caption {
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.season-chart-wrap {
+  height: 280px;
+  margin-top: 1.25rem;
+}
+
+.conference-spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.conference-spotlight-card {
+  border-top: 3px solid var(--conf-color, var(--border));
+}
+
+.conference-spotlight-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.conference-spotlight-logo {
+  object-fit: contain;
+}
+
+.season-spotlight-link {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+.marquee-games-table tbody tr.schedule-row {
+  cursor: pointer;
+}
+
+.marquee-games-table tbody tr.schedule-row:hover {
+  background: var(--surface2);
+}
+
+.season-footer {
+  margin-top: 1.5rem;
+}
+
 .game-page {
   margin-bottom: 1.5rem;
 }

@@ -156,6 +156,7 @@ class DataStore:
         self._conf_championship_summary: dict | None = None
         self._conference_deep: dict | None = None
         self._team_summaries: dict | None = None
+        self._season_summary: dict | None = None
         self._legacy_brackets: dict | None = None
         self._legacy_conf_championship: dict | None = None
         self._legacy_eligibility_fields: list | None = None
@@ -252,6 +253,13 @@ class DataStore:
             data = self._load_optional(self._data_dir / "team_summaries.json")
             self._team_summaries = data if isinstance(data, dict) else {}
         return self._team_summaries
+
+    @property
+    def season_summary(self) -> dict:
+        if self._season_summary is None:
+            data = self._load_optional(self._data_dir / "season_summary.json")
+            self._season_summary = data if isinstance(data, dict) else {}
+        return self._season_summary
 
     def _legacy_brackets_data(self) -> dict:
         if self._legacy_brackets is None:
@@ -435,6 +443,74 @@ def is_fbs_team(team: dict) -> bool:
     return is_fbs_conference(team.get("conference", ""))
 
 
+def team_logo_and_name(store: "DataStore", team_id: str) -> tuple[str, str]:
+    team = store.teams_by_id.get(str(team_id), {})
+    lb = store.lb_by_id.get(str(team_id), {})
+    name = team.get("team_name") or lb.get("team_name", team_id)
+    logo = team.get("logo_url") or ""
+    return name, logo
+
+
+def enrich_season_summary(store: "DataStore", raw: dict) -> dict:
+    """Attach team names and logo URLs from teams.json at render time."""
+    if not raw:
+        return {}
+
+    def enrich_team_ref(ref: dict) -> dict:
+        tid = str(ref.get("team_id", ""))
+        name, logo = team_logo_and_name(store, tid)
+        out = dict(ref)
+        out["team_name"] = name
+        out["logo_url"] = logo
+        return out
+
+    hero = []
+    for tid in raw.get("hero_team_ids", []):
+        name, logo = team_logo_and_name(store, tid)
+        hero.append({"team_id": str(tid), "team_name": name, "logo_url": logo})
+
+    sections = []
+    for section in raw.get("sections", []):
+        sec = dict(section)
+        if sec.get("featured_teams"):
+            sec["featured_teams"] = [enrich_team_ref(t) for t in sec["featured_teams"]]
+        chart = sec.get("chart")
+        if chart and chart.get("items"):
+            sec["chart"] = {
+                **chart,
+                "items": [enrich_team_ref(item) for item in chart["items"]],
+            }
+        sections.append(sec)
+
+    spotlights = []
+    for spot in raw.get("conference_spotlights", []):
+        s = dict(spot)
+        fav_id = s.get("favorite_team_id")
+        if fav_id:
+            name, logo = team_logo_and_name(store, fav_id)
+            s["favorite_logo_url"] = logo
+            if not s.get("favorite_name"):
+                s["favorite_name"] = name
+        spotlights.append(s)
+
+    marquee = []
+    for mg in raw.get("marquee_games", []):
+        m = dict(mg)
+        g = store.games.get(str(m.get("game_id", "")))
+        if g:
+            m["matchup"] = f"{g['away_team_name']} at {g['home_team_name']}"
+            m["home_win_pct"] = g.get("home_win_pct")
+        marquee.append(m)
+
+    return {
+        **raw,
+        "hero_teams": hero,
+        "sections": sections,
+        "conference_spotlights": spotlights,
+        "marquee_games": marquee,
+    }
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
     store = DataStore(DATA_DIR)
@@ -478,6 +554,18 @@ def create_app() -> Flask:
     @app.route("/methodology")
     def methodology():
         return render_template("methodology.html", active="methodology")
+
+    @app.route("/season")
+    def season_preview():
+        raw = store.season_summary
+        if not raw:
+            abort(404)
+        preview = enrich_season_summary(store, raw)
+        return render_template(
+            "season_summary.html",
+            preview=preview,
+            active="season",
+        )
 
     @app.route("/game/<game_key>")
     def game_detail(game_key: str):

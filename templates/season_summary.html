@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}{{ preview.title }} — CFB Simulation Viewer{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+{% block content %}
+<div class="season-page">
+  <header class="season-hero">
+    <h1>{{ preview.title }}</h1>
+    <p class="subtitle season-hero-sub">{{ preview.subtitle }}</p>
+    {% if preview.hero_teams %}
+    <div class="season-logo-strip" aria-label="Top contenders">
+      {% for t in preview.hero_teams %}
+      <a class="season-logo-item" href="{{ url_for('team_detail', team_id=t.team_id) }}" title="{{ t.team_name }}">
+        {% if t.logo_url %}
+        <img src="{{ t.logo_url }}" alt="" width="48" height="48">
+        {% else %}
+        <span class="season-logo-fallback">{{ t.team_name[:2] }}</span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </header>
+
+  {% for section in preview.sections %}
+  <article class="card prose season-section" id="{{ section.id }}">
+    <h2>{{ section.title }}</h2>
+    {% for p in section.paragraphs %}
+    <p>{{ p }}</p>
+    {% endfor %}
+
+    {% if section.featured_teams %}
+    <div class="featured-team-grid">
+      {% for t in section.featured_teams %}
+      <a class="featured-team-card" href="{{ url_for('team_detail', team_id=t.team_id) }}">
+        {% if t.logo_url %}
+        <img class="featured-team-logo" src="{{ t.logo_url }}" alt="" width="56" height="56">
+        {% endif %}
+        <div class="featured-team-text">
+          <strong>{{ t.team_name }}</strong>
+          <span class="featured-team-stat">{{ t.stat_label }}: {{ t.stat_value }}</span>
+          <span class="muted featured-team-caption">{{ t.caption }}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if section.chart %}
+    <div class="season-chart-wrap">
+      <canvas id="{{ section.chart['id'] }}"></canvas>
+    </div>
+    {% endif %}
+  </article>
+  {% endfor %}
+
+  {% if preview.conference_spotlights %}
+  <section class="season-section">
+    <h2 class="season-section-heading">Conference Spotlights</h2>
+    <div class="conference-spotlight-grid">
+      {% for spot in preview.conference_spotlights %}
+      <article class="card prose conference-spotlight-card" style="--conf-color: {{ spot.conference | conf_color }};">
+        <header class="conference-spotlight-header">
+          <span class="badge" style="background: {{ spot.conference | conf_color }};">{{ spot.conference }}</span>
+          {% if spot.favorite_logo_url %}
+          <img class="conference-spotlight-logo" src="{{ spot.favorite_logo_url }}" alt="" width="40" height="40">
+          {% endif %}
+          <div>
+            <strong>{{ spot.favorite_name }}</strong>
+            <span class="muted" style="display:block;font-size:0.85rem;">
+              {{ spot.favorite_odds_pct }}% conf title · {{ spot.total_title_odds_pct }}% of league title equity
+            </span>
+          </div>
+        </header>
+        {% for p in spot.paragraphs %}
+        <p>{{ p }}</p>
+        {% endfor %}
+        <p class="season-spotlight-link">
+          <a href="{{ url_for('conferences') }}?conference={{ spot.conference | urlencode }}">View {{ spot.conference }} →</a>
+        </p>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if preview.marquee_games %}
+  <section class="card season-section">
+    <h2 style="margin-top:0;">Marquee Games</h2>
+    <p class="muted" style="margin-top:0;">High-leverage matchups from the simulated schedule. Win % is the home team's chance to win.</p>
+    <div class="table-scroll">
+    <table class="data-table marquee-games-table">
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th>Matchup</th>
+          <th class="num">Home win %</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in preview.marquee_games %}
+        <tr class="schedule-row" onclick="window.location='{{ game_url(g.game_id) }}'">
+          <td>{{ g.label }}</td>
+          <td><a href="{{ game_url(g.game_id) }}" onclick="event.stopPropagation()">{{ g.matchup }}</a></td>
+          <td class="num">{{ g.home_win_pct }}%</td>
+          <td class="muted">{{ g.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <footer class="card prose season-footer">
+    <p style="margin-bottom:0.5rem;"><strong>Explore further</strong></p>
+    <p style="margin:0;">
+      <a href="{{ url_for('leaderboard') }}">Leaderboard</a> ·
+      <a href="{{ url_for('conferences') }}">Conferences</a> ·
+      <a href="{{ url_for('fields') }}">Playoff Fields</a> ·
+      <a href="{{ url_for('methodology') }}">How it works</a>
+    </p>
+  </footer>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: '%' } },
+      x: { ticks: { maxRotation: 45, minRotation: 45 } }
+    }
+  };
+  {% for section in preview.sections if section.chart %}
+  (function() {
+    const items = {{ section.chart['items'] | tojson }};
+    const el = document.getElementById({{ section.chart['id'] | tojson }});
+    if (!el) return;
+    new Chart(el, {
+      type: 'bar',
+      data: {
+        labels: items.map(i => i.team_name),
+        datasets: [{
+          label: {{ section.chart['label'] | tojson }},
+          data: items.map(i => i.value),
+          backgroundColor: '#4a9eff99',
+          borderColor: '#4a9eff',
+          borderWidth: 1
+        }]
+      },
+      options: chartOpts
+    });
+  })();
+  {% endfor %}
+</script>
+{% endblock %}

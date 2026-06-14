@@ -18,6 +18,7 @@
     </form>
     <nav class="nav-primary">
       <a href="{{ url_for('leaderboard') }}" class="{% if active == 'leaderboard' %}active{% endif %}">Leaderboard</a>
+      <a href="{{ url_for('season_preview') }}" class="{% if active == 'season' %}active{% endif %}">Season Preview</a>
       <a href="{{ url_for('schedule') }}" class="{% if active == 'schedule' %}active{% endif %}">Schedule</a>
       <a href="{{ url_for('bracket') }}" class="{% if active == 'bracket' %}active{% endif %}">Bracket</a>
       <a href="{{ url_for('methodology') }}" class="{% if active == 'methodology' %}active{% endif %}">How it works</a>

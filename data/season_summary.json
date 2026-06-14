@@ -1,0 +1,246 @@
+{
+  "season_year": 2026,
+  "title": "2026 Season Preview",
+  "subtitle": "1,000 simulated seasons · preseason forecast",
+  "hero_team_ids": ["194", "87", "2483", "61", "213", "2390", "84", "2641"],
+  "sections": [
+    {
+      "id": "overview",
+      "title": "The Big Picture",
+      "paragraphs": [
+        "College football enters 2026 in the twilight of the realignment era. The SEC is a 16-team superconference with Texas and Oklahoma fully settled in. The Big Ten stretches from Los Angeles to New Jersey. The Pac-12 is a shell of its former self — eight teams playing a schedule that looks more like a coalition than a century-old league. Through all of it, the 12-team College Football Playoff remains the organizing principle: four autobids for SEC, Big Ten, ACC, and Big 12 champions, with the rest of the field filled by résumé and rating.",
+        "We ran 1,000 Monte Carlo simulations of the entire 2026 season — every scheduled game, every conference championship, every playoff bracket — using preseason ratings from our forecast model. No two simulations produced the same 12-team playoff field. That is not a bug; it is the story. This season has a clear tier of contenders, but the path from September to January branches in a thousand directions.",
+        "The Big Ten hoards national title equity: its members combine for roughly 43% of all title odds in the model. Notre Dame, unaffiliated and unapologetic, appears in 70% of playoff fields — more than any other program. The SEC still supplies the most playoff teams per season, but the conference favorite is Georgia, not Alabama. Texas Tech, not Texas, leads the Big 12. Miami, not Clemson, runs the ACC. The preseason landscape rewards the programs that rose during chaos and punishes those still living on reputation."
+      ]
+    },
+    {
+      "id": "national_race",
+      "title": "The National Championship Race",
+      "paragraphs": [
+        "Ohio State sits atop the model at 14.7% title odds and 61% playoff odds — the closest thing 2026 has to a default No. 1. The Buckeyes average 9.6 wins, rank first in the Big Ten in conference title odds (30.6%), and land in the playoff field in nearly two-thirds of simulations. Ryan Day's program has been knocking on the door for years; the model says this is the roster and schedule combination that finally breaks through most often.",
+        "Notre Dame is the fascinating counterweight. The Irish win the national title less often than Ohio State (8.6%) but make the playoff far more often (70.3%). Marcus Freeman has built a program that survives the independence gauntlet and still earns a bye path in a loaded bracket. When Notre Dame and Ohio State share a field — which happens in 41% of simulations — the national title picture narrows fast.",
+        "Oregon (8.5%), Georgia (7.2%), Penn State (5.8%), and Miami (5.3%) round out the tier that can realistically win it all. Indiana at 5.0% is the season's breakout story in the Big Ten — a program that averaged nine wins in the model and pushed its way into the title conversation. Texas Tech at 4.6% is the Big 12's answer: a team that won the conference in nearly 30% of sims and carried real championship equity west of the Mississippi."
+      ],
+      "featured_teams": [
+        {
+          "team_id": "194",
+          "stat_label": "Title odds",
+          "stat_value": "14.7%",
+          "caption": "Big Ten favorite · 9.64 avg wins"
+        },
+        {
+          "team_id": "87",
+          "stat_label": "Playoff odds",
+          "stat_value": "70.3%",
+          "caption": "Most frequent playoff team in the model"
+        },
+        {
+          "team_id": "2483",
+          "stat_label": "Title odds",
+          "stat_value": "8.5%",
+          "caption": "9.30 avg wins · Big Ten contender"
+        },
+        {
+          "team_id": "61",
+          "stat_label": "Title odds",
+          "stat_value": "7.2%",
+          "caption": "SEC favorite · 9.08 avg wins"
+        },
+        {
+          "team_id": "213",
+          "stat_label": "Title odds",
+          "stat_value": "5.8%",
+          "caption": "9.44 avg wins · CCG staple"
+        },
+        {
+          "team_id": "2390",
+          "stat_label": "Title odds",
+          "stat_value": "5.3%",
+          "caption": "ACC favorite · 9.59 avg wins"
+        },
+        {
+          "team_id": "84",
+          "stat_label": "Title odds",
+          "stat_value": "5.0%",
+          "caption": "Indiana's rise · 8.99 avg wins"
+        },
+        {
+          "team_id": "2641",
+          "stat_label": "Title odds",
+          "stat_value": "4.6%",
+          "caption": "Big 12 favorite · 9.66 avg wins"
+        }
+      ],
+      "chart": {
+        "id": "titleChart",
+        "label": "Title odds %",
+        "items": [
+          {"team_id": "194", "team_name": "Ohio State", "value": 14.73},
+          {"team_id": "87", "team_name": "Notre Dame", "value": 8.55},
+          {"team_id": "2483", "team_name": "Oregon", "value": 8.53},
+          {"team_id": "61", "team_name": "Georgia", "value": 7.15},
+          {"team_id": "213", "team_name": "Penn State", "value": 5.75},
+          {"team_id": "2390", "team_name": "Miami", "value": 5.32},
+          {"team_id": "84", "team_name": "Indiana", "value": 4.96},
+          {"team_id": "2641", "team_name": "Texas Tech", "value": 4.61},
+          {"team_id": "130", "team_name": "Michigan", "value": 4.0},
+          {"team_id": "251", "team_name": "Texas", "value": 3.81}
+        ]
+      }
+    },
+    {
+      "id": "playoff_landscape",
+      "title": "The Playoff Landscape",
+      "paragraphs": [
+        "Making the 12-team field is a different challenge than winning the whole thing. Notre Dame clears the bar in 703 of 1,000 simulations — a staggering number for a team without a conference safety net. Ohio State (610), Penn State (526), Miami (523), and Georgia (510) form the next tier of playoff regulars.",
+        "The most common co-occurrences in playoff fields all involve Notre Dame. Ohio State and the Irish share a bracket in 41.4% of sims; Penn State–Notre Dame appears in 36.9%; Texas Tech–Notre Dame in 35.4%. The playoff is increasingly a question of who joins Notre Dame and Ohio State, not whether they arrive.",
+        "Bubble teams live in the 15–25% playoff range: Alabama (26.6%), Missouri (25.4%), SMU (25.5%), Texas A&M (21.5%), and Kansas State (20.2%). These programs are one good draw away from a bye and one bad Saturday away from the bowl slate. In a season with 1,000 distinct fields, there is no single 'last team in' — only probabilities."
+      ],
+      "chart": {
+        "id": "playoffChart",
+        "label": "Playoff field %",
+        "items": [
+          {"team_id": "87", "team_name": "Notre Dame", "value": 70.3},
+          {"team_id": "194", "team_name": "Ohio State", "value": 61.0},
+          {"team_id": "213", "team_name": "Penn State", "value": 52.6},
+          {"team_id": "2390", "team_name": "Miami", "value": 52.3},
+          {"team_id": "61", "team_name": "Georgia", "value": 51.0},
+          {"team_id": "2483", "team_name": "Oregon", "value": 50.8},
+          {"team_id": "2641", "team_name": "Texas Tech", "value": 49.7},
+          {"team_id": "84", "team_name": "Indiana", "value": 45.3},
+          {"team_id": "99", "team_name": "LSU", "value": 34.0},
+          {"team_id": "130", "team_name": "Michigan", "value": 31.2}
+        ]
+      }
+    },
+    {
+      "id": "what_to_watch",
+      "title": "What to Watch",
+      "paragraphs": [
+        "Variance is the theme. Teams like Purdue (3.6 avg wins) and Kent State (2.9) anchor the bottom, but even mid-tier SEC programs can crater with a bad draw because conference opponent strength averages +10 FPI. Conversely, James Madison (9.0 avg wins, 9.7% playoff odds) proves that a well-placed Group of 5 program can crash the party.",
+        "Watch the independents: Notre Dame is the headline, but UConn plays an isolated schedule with no playoff path. Watch the autobid races in the American, Sun Belt, and MAC — Navy, James Madison, and Toledo lead conferences where a single loss can end the season's meaning.",
+        "Most of all, watch November. The model's closest games cluster in conference play down the stretch: Alabama at Tennessee is a coin flip. Alabama vs Georgia at home is a season pivot. The teams that survive that gauntlet are the ones still playing when the bracket shakes out."
+      ]
+    }
+  ],
+  "conference_spotlights": [
+    {
+      "conference": "SEC",
+      "favorite_team_id": "61",
+      "favorite_name": "Georgia Bulldogs",
+      "favorite_odds_pct": 20.1,
+      "total_title_odds_pct": 27.67,
+      "paragraphs": [
+        "The SEC remains the deepest conference in the model — average conference opponent rating above +10 — but the title race is more open than the Alabama dynasty era suggested. Georgia leads at 20.1% conference title odds, with Texas (15.1%), LSU (11.9%), and Alabama (11.1%) close behind.",
+        "Oklahoma's first years in the SEC have produced a respectable 6.7 avg wins but only 3.4% conference title odds — the Sooners are still climbing the ladder in America's hardest league. Mississippi State and Florida sit at the bottom. Surviving the SEC schedule is its own accomplishment; winning it requires beating Georgia or Texas in Atlanta."
+      ]
+    },
+    {
+      "conference": "Big Ten",
+      "favorite_team_id": "194",
+      "favorite_name": "Ohio State Buckeyes",
+      "favorite_odds_pct": 30.6,
+      "total_title_odds_pct": 43.1,
+      "paragraphs": [
+        "No conference concentrates championship equity like the Big Ten. Ohio State, Oregon, Penn State, Indiana, and Michigan all carry meaningful title odds. The league places a member in the playoff in virtually every simulation and often sends three or four.",
+        "The post-realignment Big Ten is a coast-to-coast grind: USC and UCLA fly east, Washington and Oregon navigate Midwestern November nights, and Purdue wonders what happened. Indiana's surge is real in the model — 9.0 avg wins and 10.6% conference title odds — while Michigan State and Purdue anchor the cellar."
+      ]
+    },
+    {
+      "conference": "ACC",
+      "favorite_team_id": "2390",
+      "favorite_name": "Miami Hurricanes",
+      "favorite_odds_pct": 35.6,
+      "total_title_odds_pct": 10.58,
+      "paragraphs": [
+        "Miami is the ACC team the model believes in: 9.6 avg wins, 52% playoff odds, and the conference's highest title equity at 5.3%. The Hurricanes won the ACC in 35.6% of simulations — a dominant number in a league that added Cal, Stanford, and SMU without adding clarity.",
+        "Louisville, SMU, Clemson, and Georgia Tech form a second tier with playoff paths but lower ceilings. The ACC's playoff share (~12% of all field slots) punches above its national title share, suggesting a league that gets teams in but rarely closes the deal."
+      ]
+    },
+    {
+      "conference": "Big 12",
+      "favorite_team_id": "2641",
+      "favorite_name": "Texas Tech Red Raiders",
+      "favorite_odds_pct": 29.2,
+      "total_title_odds_pct": 9.32,
+      "paragraphs": [
+        "The Big 12's story is Texas Tech. The Red Raiders average 9.7 wins, make the playoff in half of all simulations, and carry 4.6% national title odds — ahead of traditional powers like Texas (3.8%) and Oklahoma (now SEC). BYU, Kansas State, and Arizona fill out a competitive middle.",
+        "This is the conference realignment built: spread-out geography, no easy outs, and a champion that might come from Lubbock rather than Austin. Oklahoma State sits at the bottom with under 5 avg wins."
+      ]
+    },
+    {
+      "conference": "Sun Belt",
+      "favorite_team_id": "256",
+      "favorite_name": "James Madison Dukes",
+      "favorite_odds_pct": 32.0,
+      "total_title_odds_pct": 0.12,
+      "paragraphs": [
+        "James Madison is the best story in Group of 5 football: 9.0 avg wins and 9.7% playoff odds — higher than many Power Four programs. The Dukes won the Sun Belt in 32% of simulations and occasionally seeded as high as 7 in the playoff bracket.",
+        "Old Dominion, Louisiana, and Troy chase them. The Sun Belt's 17.7% sim inclusion rate means a league member makes the field in nearly one of every five seasons — almost always JMU."
+      ]
+    },
+    {
+      "conference": "Pac-12",
+      "favorite_team_id": "68",
+      "favorite_name": "Boise State Broncos",
+      "favorite_odds_pct": 31.1,
+      "total_title_odds_pct": 0.29,
+      "paragraphs": [
+        "The Pac-12 name outlives its footprint. Boise State leads at 31.1% conference title odds, with Washington State (21.6%) and Texas State (18.6%) behind. The Broncos average 8.5 wins and carry the league's only meaningful national title shot at 0.16%.",
+        "This is a conference of survivors — programs that did not find a Power Four home and are making the best of it. Oregon State and Colorado State fight for respectability at the bottom."
+      ]
+    }
+  ],
+  "marquee_games": [
+    {
+      "game_id": "401856682",
+      "label": "Week 2 · Non-conference",
+      "note": "Ohio State travels to Austin in September — a measuring stick for both playoff contenders."
+    },
+    {
+      "game_id": "401856712",
+      "label": "Week 6 · SEC",
+      "note": "The season pivot in Tuscaloosa. Alabama is a home underdog against the SEC favorite."
+    },
+    {
+      "game_id": "401856717",
+      "label": "Week 6 · SEC",
+      "note": "Texas at Oklahoma in the SEC era — still a rivalry with national-title stakes."
+    },
+    {
+      "game_id": "401856723",
+      "label": "Week 7 · SEC",
+      "note": "A true coin flip in Knoxville — one of the tightest SEC games in the model."
+    },
+    {
+      "game_id": "401858490",
+      "label": "Week 7 · Big Ten",
+      "note": "Penn State at Michigan splits the model almost evenly — a potential East division decider."
+    },
+    {
+      "game_id": "401858291",
+      "label": "Week 10 · Independent/ACC",
+      "note": "Miami visits Notre Dame with both programs in the playoff picture."
+    },
+    {
+      "game_id": "401856740",
+      "label": "Week 10 · SEC",
+      "note": "Night game in Death Valley. LSU's path to the SEC title runs through moments like this."
+    },
+    {
+      "game_id": "401858514",
+      "label": "Week 10 · Big Ten",
+      "note": "Oregon at Ohio State — a top-tier clash with playoff and conference title implications."
+    },
+    {
+      "game_id": "401858540",
+      "label": "Week 13 · Big Ten",
+      "note": "The Game — but the model favors Ohio State heavily in 2026."
+    },
+    {
+      "game_id": "401856757",
+      "label": "Week 13 · SEC",
+      "note": "The Iron Bowl — Alabama is favored at home but Auburn always complicates November."
+    }
+  ]
+}
