@@ -8,6 +8,7 @@
   --border: #2d3a4f;
   --success: #3dd68c;
   --warning: #f5a524;
+  --chart-bg: #e8eaed;
 }
 
 * { box-sizing: border-box; }
@@ -174,13 +175,24 @@ table.data-table tr:hover td { background: var(--surface2); }
   color: #fff;
 }
 
-.chart-wrap {
+.chart-wrap,
+.season-chart-wrap {
   position: relative;
   height: 280px;
+  background: var(--chart-bg);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.chart-wrap {
   margin: 1rem 0;
 }
 
 .chart-wrap.tall { height: 360px; }
+
+.season-chart-wrap {
+  margin-top: 1.25rem;
+}
 
 .compare-grid {
   display: grid;
@@ -592,11 +604,6 @@ table.data-table.compact-table { font-size: 0.85rem; }
 .featured-team-caption {
   font-size: 0.8rem;
   line-height: 1.35;
-}
-
-.season-chart-wrap {
-  height: 280px;
-  margin-top: 1.25rem;
 }
 
 .conference-spotlight-grid {
