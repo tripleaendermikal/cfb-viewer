@@ -430,9 +430,9 @@ table.data-table.compact-table { font-size: 0.85rem; }
   border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: color-mix(in srgb, var(--team-alt) 85%, var(--team-on-primary));
-  color: var(--team-on-primary);
-  border: 1px solid color-mix(in srgb, var(--team-on-primary) 25%, transparent);
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .team-hero-links {
@@ -456,6 +456,15 @@ table.data-table.compact-table { font-size: 0.85rem; }
 
 .team-page a:not(.team-hero-links a) {
   color: var(--team-primary);
+}
+
+.team-page .schedule-table a {
+  color: #ffffff;
+}
+
+.team-page .schedule-table a:hover {
+  color: #ffffff;
+  opacity: 0.85;
 }
 
 .team-page .stat-value {
