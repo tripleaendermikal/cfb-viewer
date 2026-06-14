@@ -454,17 +454,18 @@ table.data-table.compact-table { font-size: 0.85rem; }
   border-top: 3px solid var(--team-primary);
 }
 
-.team-page a:not(.team-hero-links a) {
-  color: var(--team-primary);
+.team-page .schedule-table .schedule-opponent,
+.team-page .schedule-table .schedule-opponent:link,
+.team-page .schedule-table .schedule-opponent:visited,
+.team-page .schedule-table .schedule-opponent:hover,
+.team-page .schedule-table .schedule-opponent:active {
+  color: #ffffff;
+  text-decoration: none;
 }
 
-.team-page .schedule-table a {
-  color: #ffffff;
-}
-
-.team-page .schedule-table a:hover {
-  color: #ffffff;
-  opacity: 0.85;
+.team-page .schedule-table .schedule-opponent:hover {
+  text-decoration: underline;
+  opacity: 0.9;
 }
 
 .team-page .stat-value {

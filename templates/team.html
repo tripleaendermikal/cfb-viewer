@@ -69,7 +69,7 @@
         <td data-value="{{ g.game_date }}">{{ g.game_date }}</td>
         <td class="num" data-value="{{ g.week }}">{{ g.week }}</td>
         <td data-value="{{ g.opponent_name }}">
-          <a href="{{ url_for('team_detail', team_id=g.opponent_id) }}" onclick="event.stopPropagation()">{{ g.opponent_name }}</a>
+          <a class="schedule-opponent" href="{{ url_for('team_detail', team_id=g.opponent_id) }}" onclick="event.stopPropagation()">{{ g.opponent_name }}</a>
           {% if g.is_conference_game %}<span class="badge" style="background:{{ team.conference | conf_color }};font-size:0.65rem;margin-left:0.25rem;">conf</span>{% endif %}
         </td>
         <td data-value="{{ g.home_away }}">
