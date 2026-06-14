@@ -396,12 +396,25 @@ table.data-table.compact-table { font-size: 0.85rem; }
   gap: 1.25rem;
 }
 
+.team-hero-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 .team-hero-logo {
   height: 64px;
   width: auto;
-  max-width: 80px;
+  max-width: 100%;
   object-fit: contain;
-  flex-shrink: 0;
 }
 
 .team-hero-text h1 {

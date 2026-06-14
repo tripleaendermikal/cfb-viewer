@@ -8,7 +8,9 @@
   <header class="team-hero">
     <div class="team-hero-main">
       {% if team_theme.logo_url %}
-      <img src="{{ team_theme.logo_url }}" alt="" class="team-hero-logo" width="64" height="64">
+      <div class="team-hero-logo-wrap">
+        <img src="{{ team_theme.logo_url }}" alt="" class="team-hero-logo" width="64" height="64">
+      </div>
       {% endif %}
       <div class="team-hero-text">
         <h1>{{ team.team_name }}</h1>
