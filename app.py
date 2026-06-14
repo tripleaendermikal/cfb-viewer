@@ -186,7 +186,6 @@ def create_app() -> Flask:
             "title_odds_pct": lb.get("title_odds_pct", 0),
             "conf_champ_odds_pct": lb.get("conf_champ_odds_pct", 0),
             "eligibility_pct": lb.get("eligibility_pct", 0),
-            "avg_seed_when_in": lb.get("avg_seed_when_in", 0),
         }
         hist_labels = [str(i) for i in range(13)]
         hist_data = [merged["win_histogram"].get(str(i), 0) for i in range(13)]
