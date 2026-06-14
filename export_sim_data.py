@@ -265,6 +265,196 @@ def build_team_summaries(
         "summaries": summaries,
     }
 
+
+CONF_SUMMARY_MAX_WORDS = 200
+
+
+def format_conf_contender(team_name: str, pct: float) -> str:
+    return f"{short_opponent_name(team_name)} ({pct:.1f}%)"
+
+
+def build_conference_summary_text(
+    conference: str,
+    season_year: int,
+    sim_count: int,
+    conf_row: dict,
+    deep: dict,
+) -> str:
+    is_g6 = bool(conf_row.get("is_group_of_6"))
+    total_title = float(conf_row.get("total_title_odds_pct") or 0)
+    sims_member_pct = float(conf_row.get("sims_with_member_pct") or 0)
+    favorite_name = conf_row.get("conf_favorite_name")
+    favorite_odds = float(conf_row.get("conf_favorite_odds_pct") or 0)
+    teams = list(conf_row.get("teams") or [])
+    teams_sorted = sorted(teams, key=lambda t: -float(t.get("conf_champ_odds_pct") or 0))
+
+    playoff_share = float(deep.get("playoff_share_pct") or 0)
+    title_top3_share = deep.get("title_top3_share_pct")
+    avg_sos = deep.get("avg_conf_opponent_fpi")
+    top_title = max(teams, key=lambda t: float(t.get("title_odds_pct") or 0)) if teams else None
+
+    if is_g6:
+        identity = (
+            f"The {conference} is a Group of 6 league in the {season_year} preseason model, "
+            f"with a member in the playoff field in {sims_member_pct:.1f}% of {sim_count} simulations."
+        )
+        if total_title >= 0.05:
+            identity += f" The league accounts for {total_title:.2f}% of national title equity."
+    else:
+        identity = (
+            f"The {conference} is a Power Four league that carries {total_title:.2f}% of national "
+            f"title equity across {sim_count} simulations."
+        )
+        if playoff_share:
+            share_note = "a dominant share" if playoff_share >= 25 else "a meaningful slice"
+            identity += (
+                f" Members fill {playoff_share:.2f}% of all playoff field slots — "
+                f"{share_note} of the 12-team bracket."
+            )
+
+    if favorite_name and favorite_odds:
+        fav_short = short_opponent_name(favorite_name)
+        fav_row = next((t for t in teams if t.get("team_name") == favorite_name), None)
+        fav_avg_wins = float(fav_row.get("avg_wins") or 0) if fav_row else 0
+        fav_playoff = float(fav_row.get("eligibility_pct") or 0) if fav_row else 0
+
+        if favorite_odds >= 30:
+            race_open = f"{fav_short} is a heavy favorite at {favorite_odds:.1f}% conference title odds."
+        elif favorite_odds < 25:
+            race_open = (
+                f"The league championship race is wide open: {fav_short} leads at "
+                f"{favorite_odds:.1f}%, but no team clears a quarter of the sims."
+            )
+        else:
+            race_open = f"{fav_short} leads the {conference} at {favorite_odds:.1f}% conference title odds."
+
+        challengers = [t for t in teams_sorted if t.get("team_name") != favorite_name][:3]
+        challenger_strs = [
+            format_conf_contender(t["team_name"], float(t.get("conf_champ_odds_pct") or 0))
+            for t in challengers
+            if float(t.get("conf_champ_odds_pct") or 0) >= 2
+        ]
+        race_sentence = (
+            f"{race_open} The next tier includes {', '.join(challenger_strs)}."
+            if challenger_strs
+            else race_open
+        )
+        if fav_row and fav_avg_wins:
+            race_sentence += (
+                f" {fav_short} averages {fav_avg_wins:.2f} wins and reaches the playoff "
+                f"field in {fav_playoff:.1f}% of simulations."
+            )
+    else:
+        race_sentence = f"The {conference} has no clear conference favorite in the model."
+
+    national = ""
+    if top_title and float(top_title.get("title_odds_pct") or 0) > 0:
+        nt_short = short_opponent_name(top_title["team_name"])
+        nt_odds = float(top_title["title_odds_pct"])
+        nt_elig = float(top_title.get("eligibility_pct") or 0)
+        national = (
+            f"{nt_short} is the league's top national title threat at {nt_odds:.2f}% championship odds"
+        )
+        if title_top3_share is not None and not is_g6:
+            national += (
+                f", and the top three teams hold {title_top3_share:.1f}% "
+                f"of the conference's title equity."
+            )
+        else:
+            national += "."
+        if is_g6 and nt_elig >= 5:
+            national += (
+                f" That {nt_elig:.1f}% playoff rate is what makes the {conference} "
+                f"a live Group of 6 autobid path in this model."
+            )
+
+    title_threats = [
+        t for t in teams if float(t.get("title_odds_pct") or 0) >= 1.0
+    ]
+    optional: list[str] = []
+    if not is_g6 and len(title_threats) >= 2:
+        threat_names = [
+            format_conf_contender(t["team_name"], float(t.get("title_odds_pct") or 0))
+            for t in sorted(title_threats, key=lambda t: -float(t.get("title_odds_pct") or 0))[:4]
+        ]
+        optional.append(
+            f"{len(title_threats)} programs carry at least 1% national title equity, "
+            f"led by {', '.join(threat_names)}."
+        )
+
+    if is_g6:
+        top_playoff = max(teams, key=lambda t: float(t.get("eligibility_pct") or 0)) if teams else None
+        if top_playoff:
+            tp_short = short_opponent_name(top_playoff["team_name"])
+            tp_elig = float(top_playoff.get("eligibility_pct") or 0)
+            if tp_elig >= 3:
+                optional.append(
+                    f"When a {conference} team earns an autobid, it is usually {tp_short} "
+                    f"({tp_elig:.1f}% playoff field rate)."
+                )
+    if not is_g6 and avg_sos is not None:
+        optional.append(
+            f"Conference play is demanding: average opponent rating in league games is "
+            f"{avg_sos:+.1f} in the model."
+        )
+
+    if teams:
+        bottom = min(teams, key=lambda t: float(t.get("avg_wins") or 999))
+        bottom_wins = float(bottom.get("avg_wins") or 0)
+        if bottom_wins < 5:
+            optional.append(
+                f"{short_opponent_name(bottom['team_name'])} brings up the rear "
+                f"at {bottom_wins:.2f} average wins."
+            )
+
+    parts = [identity, race_sentence]
+    if national:
+        parts.append(national)
+
+    while optional:
+        candidate = " ".join([*parts, *optional])
+        if summary_word_count(candidate) <= CONF_SUMMARY_MAX_WORDS:
+            return candidate
+        optional = optional[:-1]
+
+    result = " ".join(parts)
+    if summary_word_count(result) > CONF_SUMMARY_MAX_WORDS:
+        return truncate_summary(result, CONF_SUMMARY_MAX_WORDS)
+    return result
+
+
+def build_conference_summaries(
+    conferences: list[dict],
+    conference_deep: dict[str, dict],
+    sim_count: int,
+    season_year: int,
+) -> dict:
+    summaries: dict[str, dict] = {}
+    for conf_row in conferences:
+        conf = conf_row.get("conference", "")
+        if conf == FBS_INDEP:
+            continue
+        deep = conference_deep.get(conf, {})
+        summary = build_conference_summary_text(
+            conference=conf,
+            season_year=season_year,
+            sim_count=sim_count,
+            conf_row=conf_row,
+            deep=deep,
+        )
+        summaries[conf] = {
+            "conference": conf,
+            "word_count": summary_word_count(summary),
+            "summary": summary,
+        }
+
+    return {
+        "sim_count": sim_count,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "summaries": summaries,
+    }
+
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(__file__).resolve().parent / "data"
 if str(ROOT) not in sys.path:
@@ -1204,6 +1394,12 @@ def main() -> int:
         n_sims,
         season_year,
     )
+    conference_summaries = build_conference_summaries(
+        conferences,
+        conference_deep,
+        n_sims,
+        season_year,
+    )
 
     brackets_summary = {
         "sim_count": n_sims,
@@ -1243,6 +1439,7 @@ def main() -> int:
         ("brackets_summary.json", brackets_summary),
         ("conf_championship_summary.json", conf_championship_summary),
         ("team_summaries.json", team_summaries),
+        ("conference_summaries.json", conference_summaries),
         ("last_year.json", build_last_year()),
     ]:
         sizes[name] = write_json(DATA_DIR / name, payload)

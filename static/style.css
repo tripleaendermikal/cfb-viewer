@@ -948,6 +948,18 @@ table.data-table.compact-table { font-size: 0.85rem; }
   margin: 0;
 }
 
+.conf-summary-card {
+  margin-bottom: 1rem;
+  border-left: 3px solid var(--conf-color);
+}
+
+.conf-summary {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
 .conf-accent-card {
   border-top: 3px solid var(--conf-color);
 }

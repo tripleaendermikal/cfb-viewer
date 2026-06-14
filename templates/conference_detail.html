@@ -15,6 +15,12 @@
     </p>
   </header>
 
+  {% if conference_summary %}
+  <div class="card conf-summary-card">
+    <p class="conf-summary">{{ conference_summary }}</p>
+  </div>
+  {% endif %}
+
   <div class="card-grid">
     <div class="card conf-accent-card">
       <div class="stat-label">Total Title Odds</div>
@@ -33,14 +39,14 @@
       <div class="stat-value">{{ deep.playoff_share_pct or 0 }}%</div>
       <div class="muted" style="font-size:0.8rem;">Member slots in playoff field</div>
     </div>
-    {% if deep.title_top3_share_pct is not none %}
+    {% if deep.get('title_top3_share_pct') is not none %}
     <div class="card conf-accent-card">
       <div class="stat-label">Title Odds Concentration</div>
       <div class="stat-value">{{ deep.title_top3_share_pct }}%</div>
       <div class="muted" style="font-size:0.8rem;">Top 3 teams' share of this conference's title odds</div>
     </div>
     {% endif %}
-    {% if deep.avg_conf_opponent_fpi is not none %}
+    {% if deep.get('avg_conf_opponent_fpi') is not none %}
     <div class="card conf-accent-card">
       <div class="stat-label">Avg Conf Opponent Rating</div>
       <div class="stat-value">{{ "%.1f"|format(deep.avg_conf_opponent_fpi) }}</div>
@@ -123,6 +129,38 @@
   </div>
   {% endif %}
 
+  {% if marquee_games %}
+  <div class="card conf-accent-card">
+    <h2 style="margin-top:0;font-size:1.1rem;">Marquee Games</h2>
+    <p class="muted" style="margin-top:0;">Top intra-conference matchups by team prestige and competitiveness. Win % is the home team's chance to win.</p>
+    <div class="table-scroll">
+    <table class="data-table marquee-games-table">
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th>Matchup</th>
+          <th class="num">Home win %</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in marquee_games %}
+        <tr class="schedule-row" onclick="window.location='{{ game_url(g.game_id) }}'">
+          <td>{{ g.label }}</td>
+          <td><a href="{{ game_url(g.game_id) }}" onclick="event.stopPropagation()">{{ g.matchup }}</a></td>
+          <td class="num">{{ g.home_win_pct }}%</td>
+          <td class="muted">{{ g.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:0.75rem 0 0;">
+      <a href="{{ url_for('schedule', conference=conf.conference) }}">View full {{ conf.conference }} schedule →</a>
+    </p>
+  </div>
+  {% endif %}
+
   <div class="card conf-accent-card">
     <h2 style="margin-top:0;font-size:1.1rem;">Teams</h2>
     <div class="table-scroll">
@@ -132,7 +170,7 @@
           <th data-sort="text">Team</th>
           <th data-sort="num">Rating</th>
           <th data-sort="num">Avg Wins</th>
-          <th data-sort="num">Conf Title %</th>
+          <th data-sort="num" class="sorted-desc" aria-sort="descending">Conf Title %</th>
           <th data-sort="num">CCG Apps</th>
           <th data-sort="num">Playoff %</th>
           <th data-sort="num">Title Odds</th>
@@ -164,11 +202,17 @@
 {% if champion_chart or finalist_chart or playoff_hist_labels %}
 <script>
   const confColor = {{ (conf.conference | conf_color) | tojson }};
-  const chartOpts = {
+  const countChartOpts = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: { y: { beginAtZero: true, title: { display: true, text: 'Simulations' } } }
+  };
+  const pctChartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, title: { display: true, text: '% of sims' } } }
   };
   {% if champion_chart %}
   new Chart(document.getElementById('champChart'), {
@@ -176,16 +220,16 @@
     data: {
       labels: {{ champion_chart | map(attribute='team_name') | list | tojson }},
       datasets: [{
-        data: {{ champion_chart | map(attribute='count') | list | tojson }},
+        data: {{ champion_chart | map(attribute='pct') | list | tojson }},
         backgroundColor: confColor + '99',
         borderColor: confColor,
         borderWidth: 1
       }]
     },
     options: {
-      ...chartOpts,
+      ...pctChartOpts,
       scales: {
-        ...chartOpts.scales,
+        ...pctChartOpts.scales,
         x: { ticks: { maxRotation: 45, minRotation: 45 } }
       }
     }
@@ -197,16 +241,16 @@
     data: {
       labels: {{ finalist_chart | map(attribute='team_name') | list | tojson }},
       datasets: [{
-        data: {{ finalist_chart | map(attribute='count') | list | tojson }},
+        data: {{ finalist_chart | map(attribute='pct') | list | tojson }},
         backgroundColor: confColor + '66',
         borderColor: confColor,
         borderWidth: 1
       }]
     },
     options: {
-      ...chartOpts,
+      ...pctChartOpts,
       scales: {
-        ...chartOpts.scales,
+        ...pctChartOpts.scales,
         x: { ticks: { maxRotation: 45, minRotation: 45 } }
       }
     }
@@ -226,10 +270,10 @@
       }]
     },
     options: {
-      ...chartOpts,
+      ...countChartOpts,
       scales: {
         x: { title: { display: true, text: 'Teams in playoff field' } },
-        y: chartOpts.scales.y
+        y: countChartOpts.scales.y
       }
     }
   });

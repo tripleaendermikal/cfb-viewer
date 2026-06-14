@@ -134,6 +134,50 @@ def build_conf_sim_snapshot(store: "DataStore", conf: dict, sim_index: int) -> d
     }
 
 
+def conf_marquee_note(home_win_pct: float) -> str:
+    swing = abs(home_win_pct - 50)
+    if swing <= 3:
+        return "A true coin flip in league play."
+    if swing <= 8:
+        return "A tight conference game with title-race implications."
+    if home_win_pct >= 65 or home_win_pct <= 35:
+        return "A likely mismatch — upset here would reshape the standings."
+    return "A key conference matchup in the model."
+
+
+def conf_marquee_games(store: "DataStore", conf_name: str, limit: int = 10) -> list[dict]:
+    """Top intra-conference games by team prestige and win-probability swing."""
+    rows: list[tuple[float, float, dict]] = []
+    for g in store.games.values():
+        if not g.get("is_conference_game"):
+            continue
+        if g.get("home_conference") != conf_name or g.get("away_conference") != conf_name:
+            continue
+        hid = g.get("home_team_id", "")
+        aid = g.get("away_team_id", "")
+        prestige = float(store.lb_by_id.get(hid, {}).get("title_odds_pct") or 0) + float(
+            store.lb_by_id.get(aid, {}).get("title_odds_pct") or 0
+        )
+        home_wp = float(g.get("home_win_pct") or 50)
+        rows.append((prestige, abs(home_wp - 50), g))
+
+    rows.sort(key=lambda x: (-x[0], x[1]))
+    marquee: list[dict] = []
+    for _prestige, _swing, g in rows[:limit]:
+        home_wp = float(g.get("home_win_pct") or 0)
+        week = g.get("week")
+        marquee.append(
+            {
+                "game_id": g.get("game_id", ""),
+                "label": f"Week {week}" if week is not None else "",
+                "matchup": f"{g['away_team_name']} at {g['home_team_name']}",
+                "home_win_pct": home_wp,
+                "note": conf_marquee_note(home_wp),
+            }
+        )
+    return marquee
+
+
 class DataStore:
     def __init__(self, data_dir: Path) -> None:
         self._data_dir = data_dir
@@ -156,6 +200,7 @@ class DataStore:
         self._conf_championship_summary: dict | None = None
         self._conference_deep: dict | None = None
         self._team_summaries: dict | None = None
+        self._conference_summaries: dict | None = None
         self._season_summary: dict | None = None
         self._legacy_brackets: dict | None = None
         self._legacy_conf_championship: dict | None = None
@@ -253,6 +298,13 @@ class DataStore:
             data = self._load_optional(self._data_dir / "team_summaries.json")
             self._team_summaries = data if isinstance(data, dict) else {}
         return self._team_summaries
+
+    @property
+    def conference_summaries(self) -> dict:
+        if self._conference_summaries is None:
+            data = self._load_optional(self._data_dir / "conference_summaries.json")
+            self._conference_summaries = data if isinstance(data, dict) else {}
+        return self._conference_summaries
 
     @property
     def season_summary(self) -> dict:
@@ -833,7 +885,10 @@ def create_app() -> Flask:
             if not conf:
                 abort(404)
             conf = dict(conf)
-            conf["teams"] = enrich_conference_teams(conf, store)
+            conf["teams"] = sorted(
+                enrich_conference_teams(conf, store),
+                key=lambda t: -float(t.get("conf_champ_odds_pct") or 0),
+            )
             deep = store.conference_deep.get(conf_name, {})
             playoff_hist = deep.get("playoff_teams_per_sim", {})
             playoff_hist_labels = list(playoff_hist.keys())
@@ -855,10 +910,16 @@ def create_app() -> Flask:
                 except ValueError:
                     sim_error = "Invalid sim index"
 
+            conf_summary_entry = store.conference_summaries.get("summaries", {}).get(conf_name, {})
+            conference_summary = conf_summary_entry.get("summary")
+            marquee_games = conf_marquee_games(store, conf_name)
+
             return render_template(
                 "conference_detail.html",
                 conf=conf,
                 deep=deep,
+                conference_summary=conference_summary,
+                marquee_games=marquee_games,
                 champion_chart=deep.get("champion_chart", []),
                 finalist_chart=deep.get("finalist_chart", []),
                 playoff_hist_labels=playoff_hist_labels,
