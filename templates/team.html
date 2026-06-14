@@ -65,7 +65,7 @@
     </thead>
     <tbody>
       {% for g in team_schedule %}
-      <tr class="schedule-row" onclick="window.location='{{ url_for('game_detail', game_id=g.game_id) }}'">
+      <tr class="schedule-row" onclick="window.location='{{ game_url(g.game_id) }}'">
         <td data-value="{{ g.game_date }}">{{ g.game_date }}</td>
         <td class="num" data-value="{{ g.week }}">{{ g.week }}</td>
         <td data-value="{{ g.opponent_name }}">

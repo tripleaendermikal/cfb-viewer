@@ -50,6 +50,17 @@ def contrasting_text(hex_color: str) -> str:
     return "#0f1419" if luminance > 0.6 else "#ffffff"
 
 
+MARGIN_HIST_MIN = -50
+MARGIN_HIST_MAX = 50
+MARGIN_HIST_STEP = 5
+
+
+def margin_chart_data(game: dict) -> tuple[list[str], list[int]]:
+    labels = [str(x) for x in range(MARGIN_HIST_MIN, MARGIN_HIST_MAX, MARGIN_HIST_STEP)]
+    hist = game.get("margin_histogram", {})
+    return labels, [hist.get(label, 0) for label in labels]
+
+
 def build_team_theme(team: dict, conference: str) -> dict:
     primary = team.get("primary_color") or CONFERENCE_COLORS.get(conference, "#555555")
     alternate = team.get("alternate_color") or primary
@@ -86,6 +97,9 @@ class DataStore:
         self._legacy_eligibility_fields: list | None = None
 
         self.teams_by_id = {t["team_id"]: t for t in self.teams}
+        slug_data = self._load_optional(data_dir / "game_slugs.json") or {}
+        self.slug_to_id = slug_data.get("slug_to_id", {})
+        self.id_to_slug = slug_data.get("id_to_slug", {})
         self.fbs_leaderboard = [
             r for r in self.leaderboard if is_fbs_conference(r.get("conference", ""))
         ]
@@ -258,8 +272,17 @@ class DataStore:
             return data.get("field")
         return None
 
-    def game_at(self, game_id: str) -> dict | None:
-        return self.games.get(str(game_id))
+    def game_at(self, game_key: str) -> dict | None:
+        key = str(game_key)
+        if key in self.games:
+            return self.games[key]
+        game_id = self.slug_to_id.get(key)
+        if game_id:
+            return self.games.get(game_id)
+        return None
+
+    def game_url_key(self, game_id: str) -> str:
+        return self.id_to_slug.get(str(game_id), str(game_id))
 
     def team_schedule(self, team_id: str) -> list[dict]:
         """This team's games with win odds and home/away from their perspective."""
@@ -340,9 +363,13 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_globals():
+        def game_url(game_id: str) -> str:
+            return url_for("game_detail", game_key=store.game_url_key(game_id))
+
         return {
             "meta": store.meta,
             "conference_color": CONFERENCE_COLORS,
+            "game_url": game_url,
             "team_search": [
                 {"id": t["team_id"], "name": t["team_name"]}
                 for t in store.fbs_teams
@@ -374,11 +401,16 @@ def create_app() -> Flask:
     def methodology():
         return render_template("methodology.html", active="methodology")
 
-    @app.route("/game/<game_id>")
-    def game_detail(game_id: str):
-        game = store.game_at(game_id)
+    @app.route("/game/<game_key>")
+    def game_detail(game_key: str):
+        game = store.game_at(game_key)
         if not game:
             abort(404)
+        home_team = store.teams_by_id.get(game["home_team_id"], {})
+        away_team = store.teams_by_id.get(game["away_team_id"], {})
+        home_theme = build_team_theme(home_team, game.get("home_conference", ""))
+        away_theme = build_team_theme(away_team, game.get("away_conference", ""))
+        margin_labels, margin_data = margin_chart_data(game)
         compare_url = url_for(
             "compare",
             teams=f"{game['home_team_id']},{game['away_team_id']}",
@@ -386,6 +418,10 @@ def create_app() -> Flask:
         return render_template(
             "game.html",
             game=game,
+            home_theme=home_theme,
+            away_theme=away_theme,
+            margin_labels=margin_labels,
+            margin_data=margin_data,
             compare_url=compare_url,
             active="schedule",
         )
@@ -503,14 +539,15 @@ def create_app() -> Flask:
             ids = [x.strip() for x in raw.split(",") if x.strip()][:4]
         selected = []
         chart_datasets = []
+        team_themes = []
         invalid_ids = []
-        colors = ["#3d8bfd", "#3dd68c", "#f5a524", "#ff6b9d"]
         for i, tid in enumerate(ids):
             team = store.teams_by_id.get(tid)
             lb = store.lb_by_id.get(tid, {})
             if not team or not is_fbs_team(team):
                 invalid_ids.append(tid)
                 continue
+            theme = build_team_theme(team, team.get("conference", ""))
             hist = team.get("win_histogram", {})
             selected.append(
                 {
@@ -523,12 +560,14 @@ def create_app() -> Flask:
                     "eligibility_pct": lb.get("eligibility_pct", 0),
                 }
             )
+            team_themes.append(theme)
+            primary = theme["primary"]
             chart_datasets.append(
                 {
                     "label": team["team_name"],
                     "data": [hist.get(str(w), 0) for w in range(13)],
-                    "backgroundColor": colors[(len(selected) - 1) % len(colors)] + "99",
-                    "borderColor": colors[(len(selected) - 1) % len(colors)],
+                    "backgroundColor": primary + "99",
+                    "borderColor": primary,
                     "borderWidth": 1,
                 }
             )
@@ -536,6 +575,7 @@ def create_app() -> Flask:
         return render_template(
             "compare.html",
             selected=selected,
+            team_themes=team_themes,
             selected_ids=ids,
             invalid_ids=invalid_ids,
             chart_datasets=chart_datasets,

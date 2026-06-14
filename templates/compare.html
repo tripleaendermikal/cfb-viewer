@@ -26,19 +26,29 @@
 {% if selected|length >= 2 %}
 <div class="compare-grid">
   {% for t in selected %}
-  <div class="card">
-    <h3 style="margin:0 0 0.5rem;font-size:1rem;">
-      <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
-    </h3>
-    {% if t.conference %}
-    <span class="badge" style="background:{{ t.conference | conf_color }}">{{ t.conference }}</span>
-    {% endif %}
-    <table class="data-table" style="margin-top:0.75rem;">
-      <tr><td>Title odds</td><td class="num">{{ t.title_odds_pct }}%</td></tr>
-      <tr><td>Conf title odds</td><td class="num">{{ t.conf_champ_odds_pct }}%</td></tr>
-      <tr><td>Playoff Odds</td><td class="num">{{ t.eligibility_pct }}%</td></tr>
-      <tr><td>Avg wins</td><td class="num">{{ "%.2f"|format(t.avg_wins or 0) }}</td></tr>
-    </table>
+  {% set theme = team_themes[loop.index0] %}
+  <div class="compare-team-card" style="--team-primary: {{ theme.primary }}; --team-on-primary: {{ theme.on_primary }};">
+    <div class="compare-team-hero">
+      {% if theme.logo_url %}
+      <div class="team-hero-logo-wrap compare-logo-wrap">
+        <img src="{{ theme.logo_url }}" alt="" class="team-hero-logo compare-logo" width="48" height="48">
+      </div>
+      {% endif %}
+      <div class="compare-team-hero-text">
+        <h3><a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a></h3>
+        {% if t.conference %}
+        <span class="team-hero-badge">{{ t.conference }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="compare-team-body">
+      <table class="data-table compare-stats-table">
+        <tr><td>Title odds</td><td class="num">{{ t.title_odds_pct }}%</td></tr>
+        <tr><td>Conf title odds</td><td class="num">{{ t.conf_champ_odds_pct }}%</td></tr>
+        <tr><td>Playoff Odds</td><td class="num">{{ t.eligibility_pct }}%</td></tr>
+        <tr><td>Avg wins</td><td class="num">{{ "%.2f"|format(t.avg_wins or 0) }}</td></tr>
+      </table>
+    </div>
   </div>
   {% endfor %}
 </div>

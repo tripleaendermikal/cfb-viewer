@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import re
 import subprocess
 import sys
@@ -425,7 +426,7 @@ def dedupe_schedule(schedule: list[dict]) -> list[dict]:
     )
 
 
-def load_avg_margins(path: Path, sim_cols: list[str]) -> dict[tuple[str, str], float]:
+def load_margin_lists(path: Path, sim_cols: list[str]) -> dict[tuple[str, str], list[float]]:
     if not path.is_file():
         return {}
     fieldnames, rows = read_csv(path)
@@ -451,7 +452,67 @@ def load_avg_margins(path: Path, sim_cols: list[str]) -> dict[tuple[str, str], f
                     pass
         if vals:
             out[(gid, tid)] = vals
-    return {k: sum(v) / len(v) for k, v in out.items()}
+    return out
+
+
+def load_avg_margins(margin_lists: dict[tuple[str, str], list[float]]) -> dict[tuple[str, str], float]:
+    return {k: sum(v) / len(v) for k, v in margin_lists.items() if v}
+
+
+def margin_histogram_labels(bucket_size: int = 5, min_edge: int = -50, max_edge: int = 50) -> list[str]:
+    return [str(x) for x in range(min_edge, max_edge, bucket_size)]
+
+
+def build_margin_histogram(
+    margins: list[float],
+    bucket_size: int = 5,
+    min_edge: int = -50,
+    max_edge: int = 50,
+) -> dict[str, int]:
+    top_bucket = str(max_edge - bucket_size)
+    hist = {label: 0 for label in margin_histogram_labels(bucket_size, min_edge, max_edge)}
+    for margin in margins:
+        if margin < min_edge:
+            key = str(min_edge)
+        elif margin >= max_edge:
+            key = top_bucket
+        else:
+            key = str(int(math.floor(margin / bucket_size) * bucket_size))
+            if key not in hist:
+                key = top_bucket if float(key) >= max_edge - bucket_size else str(min_edge)
+        hist[key] = hist.get(key, 0) + 1
+    return hist
+
+
+def slugify_team_name(name: str) -> str:
+    parts = re.sub(r"[^\w\s]", "", name.lower()).split()
+    if len(parts) >= 4:
+        parts = parts[:-2]
+    elif len(parts) >= 2:
+        parts = parts[:-1]
+    slug = "-".join(parts)
+    return slug or "team"
+
+
+def build_game_slugs(games: dict[str, dict]) -> dict[str, dict]:
+    slug_to_id: dict[str, str] = {}
+    id_to_slug: dict[str, str] = {}
+    for gid, game in sorted(
+        games.items(),
+        key=lambda item: (item[1].get("game_date", ""), item[1].get("week") or 0, item[0]),
+    ):
+        base = (
+            f"{slugify_team_name(game['away_team_name'])}-at-"
+            f"{slugify_team_name(game['home_team_name'])}"
+        )
+        slug = base
+        if slug in slug_to_id and slug_to_id[slug] != gid:
+            slug = f"{base}-week-{game.get('week') or 0}"
+        if slug in slug_to_id and slug_to_id[slug] != gid:
+            slug = f"{base}-{game.get('game_date', '')}"
+        slug_to_id[slug] = gid
+        id_to_slug[gid] = slug
+    return {"slug_to_id": slug_to_id, "id_to_slug": id_to_slug}
 
 
 def build_conferences(teams: list[dict], leaderboard: list[dict], fields: list[list[str]], n_sims: int) -> list[dict]:
@@ -597,7 +658,11 @@ def build_last_year() -> dict:
     }
 
 
-def build_games(schedule: list[dict], conf_by_id: dict[str, str]) -> dict[str, dict]:
+def build_games(
+    schedule: list[dict],
+    conf_by_id: dict[str, str],
+    margin_lists: dict[tuple[str, str], list[float]],
+) -> dict[str, dict]:
     """Per-game detail records keyed by game_id (home-team perspective)."""
     by_id: dict[str, dict] = {}
     for row in schedule:
@@ -615,6 +680,7 @@ def build_games(schedule: list[dict], conf_by_id: dict[str, str]) -> dict[str, d
             and home_conf != FBS_INDEP
         )
         neutral = row.get("neutral_site")
+        home_margins = margin_lists.get((gid, home_id), [])
         by_id[gid] = {
             "game_id": gid,
             "game_date": row.get("game_date", ""),
@@ -631,6 +697,7 @@ def build_games(schedule: list[dict], conf_by_id: dict[str, str]) -> dict[str, d
             "home_win_pct": row.get("win_pct"),
             "avg_margin": row.get("avg_margin"),
             "is_conference_game": is_conf,
+            "margin_histogram": build_margin_histogram(home_margins),
         }
     return by_id
 
@@ -819,10 +886,12 @@ def main() -> int:
     field_analysis = build_field_analysis(eligibility["fields"], id_to_name, n_sims)
 
     _, game_rows = read_csv(SOURCES["games_sim"])
-    margin_map = load_avg_margins(SOURCES["games_fpi"], sim_cols)
+    margin_lists = load_margin_lists(SOURCES["games_fpi"], sim_cols)
+    margin_map = load_avg_margins(margin_lists)
     schedule = build_schedule(game_rows, sim_cols, margin_map, conf_by_id)
     conferences = build_conferences(teams, leaderboard, eligibility["fields"], n_sims)
-    games = build_games(schedule, conf_by_id)
+    games = build_games(schedule, conf_by_id, margin_lists)
+    game_slugs = build_game_slugs(games)
     conf_championship = build_conf_championship(sim_cols, id_to_name)
     brackets = build_brackets(eligibility, sim_cols, name_to_id, id_to_name, leaderboard)
 
@@ -866,6 +935,7 @@ def main() -> int:
         ("schedule.json", schedule),
         ("conferences.json", conferences),
         ("games.json", games),
+        ("game_slugs.json", game_slugs),
         ("brackets_summary.json", brackets_summary),
         ("conf_championship_summary.json", conf_championship_summary),
         ("last_year.json", build_last_year()),
