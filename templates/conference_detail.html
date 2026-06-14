@@ -22,10 +22,6 @@
   </div>
   {% endif %}
   <div class="card">
-    <div class="stat-label">Playoff Appearances</div>
-    <div class="stat-value">{{ conf.total_playoff_appearances }}</div>
-  </div>
-  <div class="card">
     <div class="stat-label">Sims with Member</div>
     <div class="stat-value">{{ conf.sims_with_member }}</div>
   </div>
@@ -38,8 +34,7 @@
       <th data-sort="num">Avg Wins</th>
       <th data-sort="num">Conf Title %</th>
       <th data-sort="num">Title Odds</th>
-      <th data-sort="num">Elig %</th>
-      <th data-sort="num">Playoff Apps</th>
+      <th data-sort="num">Playoff Odds</th>
     </tr>
   </thead>
   <tbody>
@@ -52,7 +47,6 @@
       <td class="num" data-value="{{ t.conf_champ_odds_pct }}">{{ t.conf_champ_odds_pct }}%</td>
       <td class="num" data-value="{{ t.title_odds_pct }}">{{ t.title_odds_pct }}%</td>
       <td class="num" data-value="{{ t.eligibility_pct }}">{{ t.eligibility_pct }}%</td>
-      <td class="num" data-value="{{ t.playoff_appearances }}">{{ t.playoff_appearances }}</td>
     </tr>
     {% endfor %}
   </tbody>

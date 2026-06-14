@@ -185,9 +185,7 @@ def create_app() -> Flask:
             "win_histogram": team.get("win_histogram", {}),
             "title_odds_pct": lb.get("title_odds_pct", 0),
             "conf_champ_odds_pct": lb.get("conf_champ_odds_pct", 0),
-            "conf_champ_appearances": lb.get("conf_champ_appearances", 0),
             "eligibility_pct": lb.get("eligibility_pct", 0),
-            "playoff_appearances": lb.get("playoff_appearances", 0),
             "avg_seed_when_in": lb.get("avg_seed_when_in", 0),
         }
         hist_labels = [str(i) for i in range(13)]
@@ -223,10 +221,7 @@ def create_app() -> Flask:
                     "avg_wins": team.get("avg_wins"),
                     "title_odds_pct": lb.get("title_odds_pct", 0),
                     "conf_champ_odds_pct": lb.get("conf_champ_odds_pct", 0),
-                    "conf_champ_appearances": lb.get("conf_champ_appearances", 0),
                     "eligibility_pct": lb.get("eligibility_pct", 0),
-                    "playoff_appearances": lb.get("playoff_appearances", 0),
-                    "avg_seed_when_in": lb.get("avg_seed_when_in", 0),
                 }
             )
             chart_datasets.append(

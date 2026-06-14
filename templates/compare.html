@@ -5,7 +5,7 @@
 {% endblock %}
 {% block content %}
 <h1>Compare Teams</h1>
-<p class="subtitle">Select 2–4 teams to compare win distributions, title odds, and eligibility</p>
+<p class="subtitle">Select 2–4 teams to compare win distributions, title odds, and playoff odds</p>
 
 <form class="filters" method="get" id="compareForm">
   <div class="team-picker" id="teamPicker">
@@ -36,7 +36,7 @@
     <table class="data-table" style="margin-top:0.75rem;">
       <tr><td>Title odds</td><td class="num">{{ t.title_odds_pct }}%</td></tr>
       <tr><td>Conf title odds</td><td class="num">{{ t.conf_champ_odds_pct }}%</td></tr>
-      <tr><td>Elig %</td><td class="num">{{ t.eligibility_pct }}%</td></tr>
+      <tr><td>Playoff Odds</td><td class="num">{{ t.eligibility_pct }}%</td></tr>
       <tr><td>Avg wins</td><td class="num">{{ "%.2f"|format(t.avg_wins or 0) }}</td></tr>
     </table>
   </div>

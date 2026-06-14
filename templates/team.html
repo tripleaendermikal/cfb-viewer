@@ -23,12 +23,8 @@
     <div class="stat-value">{{ team.conf_champ_odds_pct }}%</div>
   </div>
   <div class="card">
-    <div class="stat-label">Playoff Eligibility</div>
+    <div class="stat-label">Playoff Odds</div>
     <div class="stat-value">{{ team.eligibility_pct }}%</div>
-  </div>
-  <div class="card">
-    <div class="stat-label">Playoff Appearances</div>
-    <div class="stat-value">{{ team.playoff_appearances }}</div>
   </div>
   <div class="card">
     <div class="stat-label">Avg Wins</div>
@@ -37,7 +33,7 @@
   <div class="card">
     <div class="stat-label">Avg Seed (when in)</div>
     <div class="stat-value">
-      {% if team.playoff_appearances %}{{ "%.2f"|format(team.avg_seed_when_in) }}{% else %}—{% endif %}
+      {% if team.eligibility_pct %}{{ "%.2f"|format(team.avg_seed_when_in) }}{% else %}—{% endif %}
     </div>
   </div>
 </div>

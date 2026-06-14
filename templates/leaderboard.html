@@ -27,7 +27,8 @@
       <th data-sort="num">Rating</th>
       <th data-sort="num">Rating Range</th>
       <th data-sort="num">Title Odds</th>
-      <th data-sort="num">Playoff %</th>
+      <th data-sort="num">Conf Title Odds</th>
+      <th data-sort="num">Playoff Odds</th>
       <th data-sort="num">Avg Wins</th>
     </tr>
   </thead>
@@ -50,6 +51,9 @@
         {% if row.fpi_ci_low is not none and row.fpi_ci_high is not none %}{{ "%.1f"|format(row.fpi_ci_low) }} – {{ "%.1f"|format(row.fpi_ci_high) }}{% else %}—{% endif %}
       </td>
       <td class="num" data-value="{{ row.title_odds_pct }}">{{ row.title_odds_pct }}%</td>
+      <td class="num" data-value="{% if row.conference == 'FBS Indep.' %}{% else %}{{ row.conf_champ_odds_pct }}{% endif %}">
+        {% if row.conference == 'FBS Indep.' %}--%{% else %}{{ row.conf_champ_odds_pct }}%{% endif %}
+      </td>
       <td class="num" data-value="{{ row.eligibility_pct }}">{{ row.eligibility_pct }}%</td>
       <td class="num" data-value="{{ row.avg_wins if row.avg_wins is not none else '' }}">
         {% if row.avg_wins is not none %}{{ "%.2f"|format(row.avg_wins) }}{% else %}—{% endif %}
