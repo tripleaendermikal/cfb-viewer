@@ -267,6 +267,76 @@ def build_team_summaries(
 
 
 CONF_SUMMARY_MAX_WORDS = 200
+MARQUEE_GAME_COUNT = 10
+
+
+def marquee_game_label(game: dict) -> str:
+    week = game.get("week", "")
+    if game.get("is_conference_game"):
+        conf = game.get("home_conference") or "Conference"
+        return f"Week {week} · {conf}"
+    return f"Week {week} · Non-conference"
+
+
+def marquee_game_note(game: dict) -> str:
+    wp = float(game.get("home_win_pct") or 50)
+    combined = float(game.get("home_fpi") or 0) + float(game.get("away_fpi") or 0)
+    if abs(wp - 50) < 3:
+        return f"Coin flip — combined rating {combined:+.1f}"
+    if wp >= 50:
+        home = short_opponent_name(game.get("home_team_name", "Home"))
+        return f"{home} {wp:.0f}% in sims — combined rating {combined:+.1f}"
+    away = short_opponent_name(game.get("away_team_name", "Away"))
+    return (
+        f"{away} road lean — home wins {wp:.0f}% "
+        f"(combined rating {combined:+.1f})"
+    )
+
+
+def build_marquee_games(games: dict[str, dict], n: int = MARQUEE_GAME_COUNT) -> list[dict]:
+    """Pick the closest FBS vs FBS games, weighted by combined preseason rating."""
+    candidates: list[tuple[float, dict]] = []
+    for game in games.values():
+        home_conf = game.get("home_conference", "")
+        away_conf = game.get("away_conference", "")
+        if not is_fbs_conference(home_conf) or not is_fbs_conference(away_conf):
+            continue
+        wp = float(game.get("home_win_pct") or 50)
+        combined = float(game.get("home_fpi") or 0) + float(game.get("away_fpi") or 0)
+        closeness = abs(50 - wp)
+        score = combined * 0.15 - closeness
+        candidates.append((score, game))
+
+    candidates.sort(key=lambda row: -row[0])
+
+    picked: list[dict] = []
+    week_counts: Counter[int | str] = Counter()
+    for _, game in candidates:
+        if len(picked) >= n:
+            break
+        week = game.get("week", "?")
+        if week_counts[week] >= 2:
+            continue
+        picked.append(
+            {
+                "game_id": game["game_id"],
+                "label": marquee_game_label(game),
+                "note": marquee_game_note(game),
+            }
+        )
+        week_counts[week] += 1
+    return picked
+
+
+def merge_season_summary_marquee(data_dir: Path, marquee: list[dict]) -> int:
+    """Replace only marquee_games in hand-maintained season_summary.json."""
+    path = data_dir / "season_summary.json"
+    if path.is_file():
+        data = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        data = {}
+    data["marquee_games"] = marquee
+    return write_json(path, data)
 
 
 def format_conf_contender(team_name: str, pct: float) -> str:
@@ -1547,6 +1617,9 @@ def main() -> int:
         conf_championship["finalists_by_sim"],
     )
     sizes["sim/*.json"] = sim_bytes
+
+    marquee = build_marquee_games(games)
+    sizes["season_summary.json"] = merge_season_summary_marquee(DATA_DIR, marquee)
 
     print(f"Exported to {DATA_DIR}")
     print(f"  Teams: {len(teams)}, Sims: {n_sims}, Games: {len(schedule)}")
