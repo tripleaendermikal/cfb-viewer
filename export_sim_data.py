@@ -18,7 +18,7 @@ from pathlib import Path
 SIM_COL_PATTERN = re.compile(r"^sim_\d+$")
 GROUP_OF_6 = {"American", "Pac-12", "Sun Belt", "CUSA", "Mountain West", "MAC"}
 FBS_INDEP = "FBS Indep."
-DEFAULT_SIGMA = 10.0
+DEFAULT_SIGMA = 7.3
 FPI_MIN = -40.0
 FPI_MAX = 40.0
 FPI_MAX_GROUP_OF_6 = 27.0
