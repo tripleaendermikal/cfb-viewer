@@ -47,12 +47,19 @@
 
 <div class="card prose">
   <h2>Playoff selection</h2>
-  <ul>
-    <li><strong>Four automatic bids</strong> go to the conference champion in the SEC, Big Ten, ACC, and Big 12.</li>
-    <li><strong>One Group of 6 autobid</strong> is guaranteed per field — the best pooled G6 record after within-league and cross-league tiebreaks.</li>
-    <li>Remaining spots are filled using win totals and ratings under our eligibility rules (including Notre Dame’s independent rule).</li>
-    <li>The field is trimmed or filled to exactly <strong>12 teams</strong> per simulation.</li>
-  </ul>
+  <p>Each simulated season builds a 12-team field using this order:</p>
+  <ol>
+    <li><strong>Power Four conference champions</strong> — auto-bids for the SEC, Big Ten, ACC, and Big 12 title winners.</li>
+    <li><strong>Notre Dame</strong> — in if the Fighting Irish win 10+ games.</li>
+    <li><strong>Group of 6 autobid</strong> — exactly one team from the pooled G6 leagues (within-league and cross-league tiebreaks; Pac-12 exempt from zero-out).</li>
+    <li><strong>Top two SEC</strong> teams not already in the field (by wins; higher SOS breaks ties).</li>
+    <li><strong>Top two Big Ten</strong> teams not already in the field (same tiebreak).</li>
+    <li><strong>Power Four 12-win teams</strong> — any SEC, Big Ten, ACC, or Big 12 team with 12+ wins.</li>
+    <li><strong>Win-tier fill</strong> (only if fewer than 12): SEC 10+, Big Ten 10+, ACC/Big 12 10+, SEC 9+, Big Ten 9+, then any team with 12+ wins — one team at a time per tier until the field reaches 12.</li>
+    <li><strong>FPI backfill</strong> — highest per-season rating among remaining teams until 12.</li>
+    <li><strong>Overflow trim</strong> (if more than 12): remove lowest-SOS teams in priority order (Big Ten 9-win non-champs, SEC 9-win non-champs, ACC/Big 12 10-win non-champs, SEC/Big Ten 10-win non-champs), then random among teams not locked by rules 1–3.</li>
+    <li><strong>Re-lock</strong> conference champions, Notre Dame, and the G6 autobid; fill again to 12 if needed.</li>
+  </ol>
 </div>
 
 <div class="card prose">
