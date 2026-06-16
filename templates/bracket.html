@@ -32,6 +32,7 @@
         <li>
           <span class="seed-num">{{ s.seed }}</span>
           <a href="{{ url_for('team_detail', team_id=s.team_id) }}">{{ s.team_name }}</a>
+          {% if s.record %}<span class="muted">{{ s.record }}</span>{% endif %}
           <span class="muted">Rating {{ s.fpi }}</span>
         </li>
         {% endfor %}
@@ -45,10 +46,10 @@
         {% set lo = sim_bracket.seeds | selectattr('seed', 'equalto', pair[1]) | first %}
         <li>
           <span class="seed-num">{{ pair[0] }}</span>
-          {% if hi %}<a href="{{ url_for('team_detail', team_id=hi.team_id) }}">{{ hi.team_name }}</a>{% else %}—{% endif %}
+          {% if hi %}<a href="{{ url_for('team_detail', team_id=hi.team_id) }}">{{ hi.team_name }}</a>{% if hi.record %}<span class="muted">{{ hi.record }}</span>{% endif %}{% else %}—{% endif %}
           <span class="vs">vs</span>
           <span class="seed-num">{{ pair[1] }}</span>
-          {% if lo %}<a href="{{ url_for('team_detail', team_id=lo.team_id) }}">{{ lo.team_name }}</a>{% else %}—{% endif %}
+          {% if lo %}<a href="{{ url_for('team_detail', team_id=lo.team_id) }}">{{ lo.team_name }}</a>{% if lo.record %}<span class="muted">{{ lo.record }}</span>{% endif %}{% else %}—{% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -57,13 +58,14 @@
       <h3>All seeds</h3>
       <table class="data-table compact-table">
         <thead>
-          <tr><th>Seed</th><th>Team</th><th>Rating</th><th>Title % (this sim)</th></tr>
+          <tr><th>Seed</th><th>Team</th><th>Record</th><th>Rating</th><th>Title % (this sim)</th></tr>
         </thead>
         <tbody>
           {% for s in sim_bracket.seeds %}
           <tr>
             <td class="num">{{ s.seed }}</td>
             <td><a href="{{ url_for('team_detail', team_id=s.team_id) }}">{{ s.team_name }}</a></td>
+            <td class="num">{% if s.record %}{{ s.record }}{% else %}—{% endif %}</td>
             <td class="num">{{ s.fpi }}</td>
             <td class="num">
               {% set to = sim_bracket.title_odds_by_team_id.get(s.team_id) %}

@@ -1379,6 +1379,47 @@ def build_games(
     return by_id
 
 
+def build_rs_wl_by_sim(
+    game_rows: list[dict],
+    sim_cols: list[str],
+) -> dict[str, dict[str, tuple[int, int]]]:
+    """Per-sim regular-season W-L from team-game rows (wins/losses only)."""
+    wins: dict[str, dict[str, int]] = {col: {} for col in sim_cols}
+    games: dict[str, dict[str, int]] = {col: {} for col in sim_cols}
+    for row in game_rows:
+        tid = (row.get("team_id") or "").strip()
+        if not tid:
+            continue
+        for col in sim_cols:
+            games[col][tid] = games[col].get(tid, 0) + 1
+            if (row.get(col) or "").strip() == "1":
+                wins[col][tid] = wins[col].get(tid, 0) + 1
+    out: dict[str, dict[str, tuple[int, int]]] = {}
+    for col in sim_cols:
+        out[col] = {}
+        for tid in set(games[col]) | set(wins[col]):
+            w = wins[col].get(tid, 0)
+            g = games[col].get(tid, 0)
+            out[col][tid] = (w, g - w)
+    return out
+
+
+def bracket_record_with_ccg(
+    rs_w: int,
+    rs_l: int,
+    team_id: str,
+    champs: dict[str, str],
+    finalists: dict[str, list[str]],
+) -> tuple[int, int]:
+    """Adjust RS record for conference championship result."""
+    if any(champs.get(conf) == team_id for conf in champs):
+        return rs_w + 1, rs_l
+    for conf, ids in finalists.items():
+        if team_id in ids and champs.get(conf) != team_id:
+            return rs_w, rs_l + 1
+    return rs_w, rs_l
+
+
 def build_conf_championship(
     sim_cols: list[str],
     id_to_name: dict[str, str],
@@ -1426,6 +1467,9 @@ def build_brackets(
     name_to_id: dict[str, str],
     id_to_name: dict[str, str],
     leaderboard: list[dict],
+    game_rows: list[dict] | None = None,
+    champions_by_sim: list[dict[str, str]] | None = None,
+    finalists_by_sim: list[dict[str, list[str]]] | None = None,
 ) -> dict:
     """Per-sim playoff seeds/brackets and team-centric summary."""
     sim_fpi_by_col = load_sim_fpi_by_team(SOURCES["games_fpi"])
@@ -1436,6 +1480,7 @@ def build_brackets(
     seed_sums: dict[str, float] = {}
     seed_counts: dict[str, int] = {}
     r1_seeds = [[5, 12], [6, 11], [7, 10], [8, 9]]
+    rs_wl_by_sim = build_rs_wl_by_sim(game_rows, sim_cols) if game_rows else {}
 
     for sim_idx, col in enumerate(sim_cols):
         field_ids = fields[sim_idx] if sim_idx < len(fields) else []
@@ -1446,15 +1491,22 @@ def build_brackets(
             if name in fpi_by_name:
                 rated.append((tid, fpi_by_name[name]))
         rated.sort(key=lambda x: (-x[1], x[0]))
-        seeds = [
-            {
+        champs = (champions_by_sim[sim_idx] if champions_by_sim and sim_idx < len(champions_by_sim) else {})
+        finalists = (finalists_by_sim[sim_idx] if finalists_by_sim and sim_idx < len(finalists_by_sim) else {})
+        rs_wl = rs_wl_by_sim.get(col, {})
+        seeds = []
+        for i, (tid, fpi) in enumerate(rated[:12]):
+            rs_w, rs_l = rs_wl.get(tid, (0, 0))
+            w, l = bracket_record_with_ccg(rs_w, rs_l, tid, champs, finalists)
+            seeds.append({
                 "team_id": tid,
                 "team_name": id_to_name.get(tid, tid),
                 "seed": i + 1,
                 "fpi": round(fpi, 2),
-            }
-            for i, (tid, fpi) in enumerate(rated[:12])
-        ]
+                "wins": w,
+                "losses": l,
+                "record": f"{w}-{l}",
+            })
         for s in seeds:
             tid = s["team_id"]
             seed_hist.setdefault(tid, Counter())[str(s["seed"])] += 1
@@ -1572,7 +1624,16 @@ def main() -> int:
     games = build_games(schedule, conf_by_id, margin_lists)
     game_slugs = build_game_slugs(games)
     conf_championship = build_conf_championship(sim_cols, id_to_name)
-    brackets = build_brackets(eligibility, sim_cols, name_to_id, id_to_name, leaderboard)
+    brackets = build_brackets(
+        eligibility,
+        sim_cols,
+        name_to_id,
+        id_to_name,
+        leaderboard,
+        game_rows=game_rows,
+        champions_by_sim=conf_championship["champions_by_sim"],
+        finalists_by_sim=conf_championship["finalists_by_sim"],
+    )
     conference_deep = build_conference_deep(
         conferences,
         conf_championship["champions_by_sim"],
