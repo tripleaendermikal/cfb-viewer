@@ -537,13 +537,13 @@ from cfb_playoff_odds_calc import load_sim_fpi_by_team
 SOURCES = {
     "champ_odds": ROOT / "cfb_2026_FBS_playoff_champ_odds_fpi_seed.csv",
     "conf_champ_odds": ROOT / "cfb_2026_FBS_conf_champ_odds.csv",
-    "elig_pct": ROOT / "cfb_2026_FBS_playoff_elig_pct.csv",
     "elig": ROOT / "cfb_2026_FBS_playoff_elig_v2.csv",
     "records": ROOT / "cfb_2026_fbs_team_sim_records_v2.csv",
     "games_sim": ROOT / "cfb_2026_fbs_games_with_fpi_simulated.csv",
     "games_fpi": ROOT / "cfb_2026_fbs_games_with_fpi.csv",
     "conferences": ROOT / "espn_cfb_teams_conferences.csv",
 }
+ELIG_PCT_PATH = ROOT / "cfb_2026_FBS_playoff_elig_pct.csv"
 
 LAST_YEAR_SOURCES = {
     "margin_ratings": ROOT / "cfb_2025_fbs_margin_ratings.csv",
@@ -670,6 +670,44 @@ def merge_conf_champ_odds(leaderboard: list[dict], conf_champ_rows: list[dict]) 
             row["conf_champ_odds_pct"] = 0.0
             row["conf_champ_appearances"] = 0
             row["conf_champ_game_win_pct"] = 0.0
+
+
+def compute_elig_pct_rows(
+    elig_rows: list[dict[str, str]], sim_cols: list[str]
+) -> list[dict]:
+    """Derive playoff field % from elig flags (canonical source)."""
+    out: list[dict] = []
+    n = len(sim_cols)
+    for row in elig_rows:
+        count = sum(1 for col in sim_cols if (row.get(col) or "").strip() == "1")
+        pct = round(count / n * 100, 1) if n else 0.0
+        out.append(
+            {
+                "team_name": row.get("team_name", ""),
+                "conference": row.get("conference", ""),
+                "eligibility_pct": pct,
+            }
+        )
+    return out
+
+
+def write_elig_pct_csv(path: Path, rows: list[dict]) -> None:
+    sorted_rows = sorted(
+        rows, key=lambda r: (-float(r["eligibility_pct"]), r["team_name"])
+    )
+    with path.open("w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(
+            f, fieldnames=["team_name", "conference", "eligibility_pct"]
+        )
+        writer.writeheader()
+        for row in sorted_rows:
+            writer.writerow(
+                {
+                    "team_name": row["team_name"],
+                    "conference": row["conference"],
+                    "eligibility_pct": row["eligibility_pct"],
+                }
+            )
 
 
 def build_leaderboard(champ_rows: list[dict], elig_pct_rows: list[dict]) -> list[dict]:
@@ -1502,7 +1540,9 @@ def main() -> int:
     id_to_name = {t["team_id"]: t["team_name"] for t in teams}
 
     _, champ_rows = read_csv(SOURCES["champ_odds"])
-    _, elig_pct_rows = read_csv(SOURCES["elig_pct"])
+    _, elig_rows = read_csv(SOURCES["elig"])
+    elig_pct_rows = compute_elig_pct_rows(elig_rows, sim_cols)
+    write_elig_pct_csv(ELIG_PCT_PATH, elig_pct_rows)
     _, conf_champ_rows = read_csv(SOURCES["conf_champ_odds"])
     leaderboard = build_leaderboard(champ_rows, elig_pct_rows)
     merge_team_ids(leaderboard, teams)
@@ -1520,7 +1560,6 @@ def main() -> int:
         )
     )
 
-    _, elig_rows = read_csv(SOURCES["elig"])
     eligibility = build_eligibility(elig_rows, sim_cols, name_to_id)
     field_analysis = build_field_analysis(eligibility["fields"], id_to_name, n_sims, conf_by_id)
 
@@ -1581,7 +1620,10 @@ def main() -> int:
         "season_year": season_year,
         "sim_count": n_sims,
         "exported_at": datetime.now(timezone.utc).isoformat(),
-        "sources": {k: str(v) for k, v in SOURCES.items()},
+        "sources": {
+            **{k: str(v) for k, v in SOURCES.items()},
+            "elig_pct": str(ELIG_PCT_PATH),
+        },
         "team_count": len(teams),
         "game_count": len(schedule),
         "fpi_sigma": DEFAULT_SIGMA,
