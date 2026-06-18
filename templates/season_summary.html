@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import conference_badge %}
 {% block title %}{{ preview.title }} — CFB Simulation Viewer{% endblock %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -62,7 +63,7 @@
       {% for spot in preview.conference_spotlights %}
       <article class="card prose conference-spotlight-card" style="--conf-color: {{ spot.conference | conf_color }};">
         <header class="conference-spotlight-header">
-          <span class="badge" style="background: {{ spot.conference | conf_color }};">{{ spot.conference }}</span>
+          {{ conference_badge(spot.conference) }}
           {% if spot.favorite_logo_url %}
           <img class="conference-spotlight-logo" src="{{ spot.favorite_logo_url }}" alt="" width="40" height="40">
           {% endif %}

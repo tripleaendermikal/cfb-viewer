@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import conference_badge %}
 {% block title %}{{ game.away_team_name }} at {{ game.home_team_name }} — CFB Simulation Viewer{% endblock %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -19,7 +20,7 @@
           <p class="game-hero-role">Away</p>
           <h1><a href="{{ url_for('team_detail', team_id=game.away_team_id) }}">{{ game.away_team_name }}</a></h1>
           {% if game.away_conference %}
-          <span class="team-hero-badge">{{ game.away_conference }}</span>
+          {{ conference_badge(game.away_conference, variant='hero') }}
           {% endif %}
           {% if game.away_fpi is not none %}
           <p class="game-hero-rating">Rating {{ "%.1f"|format(game.away_fpi) }}</p>
@@ -59,7 +60,7 @@
           <p class="game-hero-role">Home</p>
           <h1><a href="{{ url_for('team_detail', team_id=game.home_team_id) }}">{{ game.home_team_name }}</a></h1>
           {% if game.home_conference %}
-          <span class="team-hero-badge">{{ game.home_conference }}</span>
+          {{ conference_badge(game.home_conference, variant='hero') }}
           {% endif %}
           {% if game.home_fpi is not none %}
           <p class="game-hero-rating">Rating {{ "%.1f"|format(game.home_fpi) }}</p>

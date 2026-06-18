@@ -1,0 +1,13 @@
+{% macro conference_badge(conf, variant='pill', small=false, stop_propagation=false) %}
+  {% if conf %}
+  <a href="{{ url_for('conferences', conference=conf) }}"
+     class="conf-badge-link"
+     {% if stop_propagation %}onclick="event.stopPropagation()"{% endif %}>
+    {% if variant == 'hero' %}
+    <span class="team-hero-badge">{{ conf }}</span>
+    {% else %}
+    <span class="badge" style="background:{{ conf | conf_color }}{% if small == true %};font-size:0.65rem{% elif small == 'sm' %};font-size:0.7rem{% endif %}">{{ conf }}</span>
+    {% endif %}
+  </a>
+  {% endif %}
+{% endmacro %}

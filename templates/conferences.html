@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import conference_badge %}
 {% block title %}Conferences — CFB Simulation Viewer{% endblock %}
 {% block content %}
 <h1>Conference Summary</h1>
@@ -39,9 +40,7 @@
     {% for c in conferences %}
     <tr>
       <td data-value="{{ c.conference }}">
-        <a href="{{ url_for('conferences', conference=c.conference) }}">
-          <span class="badge" style="background:{{ c.conference | conf_color }}">{{ c.conference }}</span>
-        </a>
+        {{ conference_badge(c.conference) }}
       </td>
       <td class="num" data-value="{{ c.team_count }}">{{ c.team_count }}</td>
       <td class="num" data-value="{{ c.total_title_odds_pct }}">{{ c.total_title_odds_pct }}%</td>

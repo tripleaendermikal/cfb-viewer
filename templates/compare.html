@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import conference_badge %}
 {% block title %}Compare Teams — CFB Simulation Viewer{% endblock %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -37,7 +38,7 @@
       <div class="compare-team-hero-text">
         <h3><a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a></h3>
         {% if t.conference %}
-        <span class="team-hero-badge">{{ t.conference }}</span>
+        {{ conference_badge(t.conference, variant='hero') }}
         {% endif %}
       </div>
     </div>

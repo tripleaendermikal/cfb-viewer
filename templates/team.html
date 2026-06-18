@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import conference_badge %}
 {% block title %}{{ team.team_name }} — CFB Simulation Viewer{% endblock %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -15,7 +16,7 @@
       <div class="team-hero-text">
         <h1>{{ team.team_name }}</h1>
         {% if team.conference %}
-        <span class="team-hero-badge">{{ team.conference }}</span>
+        {{ conference_badge(team.conference, variant='hero') }}
         {% endif %}
       </div>
     </div>

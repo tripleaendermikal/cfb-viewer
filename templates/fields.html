@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import conference_badge %}
 {% block title %}Playoff Field Analysis — CFB Simulation Viewer{% endblock %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -51,7 +52,7 @@
           </td>
           <td data-value="{{ t.conference }}">
             {% if t.conference %}
-            <span class="badge" style="background:{{ t.conference | conf_color }}">{{ t.conference }}</span>
+            {{ conference_badge(t.conference) }}
             {% else %}—{% endif %}
           </td>
           <td class="num" data-value="{{ t.fpi if t.fpi is not none else '' }}">
@@ -59,7 +60,7 @@
           </td>
           <td data-value="{% if t.is_conf_champ %}yes{% elif t.is_independent %}indep{% else %}no{% endif %}">
             {% if t.is_conf_champ %}
-            <span class="badge" style="background:{{ t.champ_conference | conf_color }};font-size:0.7rem;">{{ t.champ_conference }}</span>
+            {{ conference_badge(t.champ_conference, small='sm') }}
             {% elif t.is_independent %}
             <span class="muted">Independent</span>
             {% else %}
@@ -130,9 +131,7 @@
             <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
           </td>
           <td data-value="{{ t.conference }}">
-            {% if t.conference %}
-            <span class="badge" style="background:{{ t.conference | conf_color }}">{{ t.conference }}</span>
-            {% endif %}
+            {{ conference_badge(t.conference) }}
           </td>
           <td class="num" data-value="{{ t.count }}">{{ t.count }}</td>
           <td class="num" data-value="{{ t.pct }}">{{ t.pct }}%</td>
@@ -161,7 +160,7 @@
           {% for c in analysis.conference_representation %}
           <tr>
             <td data-value="{{ c.conference }}">
-              <span class="badge" style="background:{{ c.conference | conf_color }}">{{ c.conference }}</span>
+              {{ conference_badge(c.conference) }}
             </td>
             <td class="num" data-value="{{ c.avg_teams_in_field }}">{{ "%.2f"|format(c.avg_teams_in_field) }}</td>
             <td class="num" data-value="{{ c.pct_sims_with_member }}">{{ c.pct_sims_with_member }}%</td>
@@ -183,7 +182,7 @@
           <a href="{{ url_for('team_detail', team_id=t.team_id) }}">{{ t.team_name }}</a>
           <span class="num">{{ t.pct }}%</span>
           {% if t.conference %}
-          <span class="badge" style="background:{{ t.conference | conf_color }};font-size:0.65rem;">{{ t.conference }}</span>
+          {{ conference_badge(t.conference, small=true) }}
           {% endif %}
         </li>
         {% endfor %}
@@ -257,12 +256,12 @@
           <td data-value="{{ p.team_a_name }}">
             <a href="{{ url_for('team_detail', team_id=p.team_a_id) }}">{{ p.team_a_name }}</a>
             {% if p.team_a_conference %}
-            <span class="badge" style="background:{{ p.team_a_conference | conf_color }};font-size:0.65rem;">{{ p.team_a_conference }}</span>
+            {{ conference_badge(p.team_a_conference, small=true) }}
             {% endif %}
             +
             <a href="{{ url_for('team_detail', team_id=p.team_b_id) }}">{{ p.team_b_name }}</a>
             {% if p.team_b_conference %}
-            <span class="badge" style="background:{{ p.team_b_conference | conf_color }};font-size:0.65rem;">{{ p.team_b_conference }}</span>
+            {{ conference_badge(p.team_b_conference, small=true) }}
             {% endif %}
           </td>
           <td class="num" data-value="{{ p.count }}">{{ p.count }}</td>

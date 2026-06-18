@@ -175,6 +175,17 @@ table.data-table tr:hover td { background: var(--surface2); }
   color: #fff;
 }
 
+.conf-badge-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+}
+
+.conf-badge-link:hover .badge,
+.conf-badge-link:hover .team-hero-badge {
+  filter: brightness(1.1);
+}
+
 .chart-wrap,
 .season-chart-wrap {
   position: relative;
