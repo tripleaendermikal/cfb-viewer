@@ -61,6 +61,24 @@ def margin_chart_data(game: dict) -> tuple[list[str], list[int]]:
     return labels, [hist.get(label, 0) for label in labels]
 
 
+def is_neutral_site_flag(value) -> bool:
+    return value in (True, "True", "true", "1", 1)
+
+
+def display_avg_margin(margin, home_away: str = "", neutral_site=False) -> float | None:
+    """Apply viewer-only HFA to raw FPI margins for schedule tables."""
+    if margin is None:
+        return None
+    if is_neutral_site_flag(neutral_site) or (home_away or "").lower() == "neutral":
+        return float(margin)
+    ha = (home_away or "").lower()
+    if ha == "home":
+        return float(margin) + 3.0
+    if ha == "away":
+        return float(margin) - 3.0
+    return float(margin)
+
+
 def build_team_theme(team: dict, conference: str) -> dict:
     primary = team.get("primary_color") or CONFERENCE_COLORS.get(conference, "#555555")
     alternate = team.get("alternate_color") or primary
@@ -603,6 +621,10 @@ def create_app() -> Flask:
         if val is None:
             return "—"
         return f"{float(val):.1f}%"
+
+    @app.template_filter("display_avg_margin")
+    def display_avg_margin_filter(margin, home_away="", neutral_site=False):
+        return display_avg_margin(margin, home_away, neutral_site)
 
     @app.route("/methodology")
     def methodology():

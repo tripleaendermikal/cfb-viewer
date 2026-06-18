@@ -102,8 +102,9 @@
           {% if g.home_away == 'home' %}Home{% elif g.home_away == 'away' %}Away{% else %}Neutral{% endif %}
         </td>
         <td class="num" data-value="{{ g.win_pct }}">{{ g.win_pct }}%</td>
-        <td class="num" data-value="{{ g.avg_margin if g.avg_margin is not none else '' }}">
-          {% if g.avg_margin is not none %}{{ "%.1f"|format(g.avg_margin) }}{% else %}—{% endif %}
+        {% set dm = g.avg_margin | display_avg_margin(g.home_away, g.home_away == 'neutral') %}
+        <td class="num" data-value="{{ dm if dm is not none else '' }}">
+          {% if dm is not none %}{{ "%.1f"|format(dm) }}{% else %}—{% endif %}
         </td>
       </tr>
       {% endfor %}
