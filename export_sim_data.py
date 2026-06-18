@@ -428,7 +428,7 @@ def build_conference_summary_text(
         if title_top3_share is not None and not is_g6:
             national += (
                 f", and the top three teams hold {title_top3_share:.1f}% "
-                f"of the conference's title equity."
+                f"of the conference's conf title odds."
             )
         else:
             national += "."
@@ -1237,9 +1237,9 @@ def build_conference_deep(
                 )
             return items
 
-        title_pcts = [t.get("title_odds_pct", 0) for t in conf_row["teams"]]
-        title_total = sum(title_pcts)
-        top3 = sum(sorted(title_pcts, reverse=True)[:3])
+        conf_title_pcts = [t.get("conf_champ_odds_pct", 0) for t in conf_row["teams"]]
+        conf_title_total = sum(conf_title_pcts)
+        top3_conf_title = sum(sorted(conf_title_pcts, reverse=True)[:3])
         sos_vals = [t["sos"] for t in conf_row["teams"] if t.get("sos") is not None]
         field_apps = sum(t.get("playoff_appearances", 0) for t in conf_row["teams"])
         member_slots = len(team_ids) * n_sims if n_sims else 1
@@ -1251,7 +1251,9 @@ def build_conference_deep(
                 str(k): playoff_per_sim[k] for k in sorted(playoff_per_sim.keys())
             },
             "playoff_share_pct": round(field_apps / member_slots * 100, 2),
-            "title_top3_share_pct": round(top3 / title_total * 100, 1) if title_total else 0,
+            "title_top3_share_pct": round(top3_conf_title / conf_title_total * 100, 1)
+            if conf_title_total
+            else 0,
             "avg_sos": round(sum(sos_vals) / len(sos_vals), 2) if sos_vals else None,
         }
     return deep
