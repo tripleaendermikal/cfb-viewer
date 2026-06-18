@@ -723,14 +723,17 @@ def create_app() -> Flask:
             "team_id": team_id,
             "team_name": team.get("team_name") or lb.get("team_name", team_id),
             "conference": team.get("conference") or lb.get("conference", ""),
-            "avg_wins": team.get("avg_wins"),
+            "avg_wins": lb.get("avg_wins") if lb.get("avg_wins") is not None else team.get("avg_wins"),
             "win_histogram": team.get("win_histogram", {}),
             "title_odds_pct": lb.get("title_odds_pct", 0),
             "conf_champ_odds_pct": lb.get("conf_champ_odds_pct", 0),
             "eligibility_pct": lb.get("eligibility_pct", 0),
+            "playoff_appearances": lb.get("playoff_appearances", 0),
             "conf_champ_appearances": lb.get("conf_champ_appearances", 0),
             "baseline_fpi": lb.get("baseline_fpi"),
-            "sos": lb.get("sos") or team.get("sos"),
+            "fpi_ci_low": lb.get("fpi_ci_low"),
+            "fpi_ci_high": lb.get("fpi_ci_high"),
+            "sos": lb.get("sos") if lb.get("sos") is not None else team.get("sos"),
         }
         ccg = store.conf_championship_summary.get("team_summary", {}).get(team_id, {})
         merged["ccg_appearances"] = ccg.get("ccg_appearances", merged["conf_champ_appearances"])

@@ -41,7 +41,9 @@
   </div>
   <div class="card">
     <div class="stat-label">Conf Title Odds</div>
-    <div class="stat-value">{{ team.conf_champ_odds_pct }}%</div>
+    <div class="stat-value">
+      {% if team.conference == 'FBS Indep.' %}--{% else %}{{ team.conf_champ_odds_pct }}%{% endif %}
+    </div>
   </div>
   <div class="card">
     <div class="stat-label">Playoff Odds</div>
@@ -51,6 +53,18 @@
     <div class="stat-label">Avg Wins</div>
     <div class="stat-value">{{ "%.2f"|format(team.avg_wins or 0) }}</div>
   </div>
+  {% if team.baseline_fpi is not none %}
+  <div class="card">
+    <div class="stat-label">Rating</div>
+    <div class="stat-value">{{ "%.1f"|format(team.baseline_fpi) }}</div>
+  </div>
+  {% endif %}
+  {% if team.fpi_ci_low is not none and team.fpi_ci_high is not none %}
+  <div class="card">
+    <div class="stat-label">Rating Range</div>
+    <div class="stat-value" style="font-size:1.1rem;">{{ "%.1f"|format(team.fpi_ci_low) }} – {{ "%.1f"|format(team.fpi_ci_high) }}</div>
+  </div>
+  {% endif %}
   {% if team.sos is not none %}
   <div class="card">
     <div class="stat-label">SOS</div>
