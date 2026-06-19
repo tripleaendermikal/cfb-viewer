@@ -1679,6 +1679,8 @@ def main() -> int:
     }
     eligibility_slim = {"sim_count": n_sims}
 
+    fbs_team_count = sum(1 for t in teams if is_fbs_team(t))
+
     meta = {
         "season_year": season_year,
         "sim_count": n_sims,
@@ -1687,7 +1689,7 @@ def main() -> int:
             **{k: str(v) for k, v in SOURCES.items()},
             "elig_pct": str(ELIG_PCT_PATH),
         },
-        "team_count": len(teams),
+        "team_count": fbs_team_count,
         "game_count": len(schedule),
         "fpi_sigma": DEFAULT_SIGMA,
         "fpi_ci_method": "analytical_90",
@@ -1727,7 +1729,7 @@ def main() -> int:
     sizes["season_summary.json"] = merge_season_summary_marquee(DATA_DIR, marquee)
 
     print(f"Exported to {DATA_DIR}")
-    print(f"  Teams: {len(teams)}, Sims: {n_sims}, Games: {len(schedule)}")
+    print(f"  FBS teams: {fbs_team_count} ({len(teams)} in sim records), Sims: {n_sims}, Games: {len(schedule)}")
     print(f"  Unique playoff fields: {field_analysis['unique_field_count']}")
     for name, nbytes in sizes.items():
         print(f"  {name}: {nbytes / 1024:.1f} KB")

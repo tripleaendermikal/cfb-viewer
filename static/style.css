@@ -8,7 +8,8 @@
   --border: #2d3a4f;
   --success: #3dd68c;
   --warning: #f5a524;
-  --chart-bg: #e8eaed;
+  --chart-surface: #323f54;
+  --chart-track: #3d4d65;
 }
 
 * { box-sizing: border-box; }
@@ -25,10 +26,11 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 .navbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 7.5rem 0.75rem 1.5rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
@@ -69,6 +71,20 @@ a:hover { text-decoration: underline; }
   margin-left: auto;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+.navbar-logo {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: block;
+  height: 3rem;
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  opacity: 0.85;
+  border-radius: 3px;
 }
 
 .container {
@@ -190,7 +206,8 @@ table.data-table tr:hover td { background: var(--surface2); }
 .season-chart-wrap {
   position: relative;
   height: 280px;
-  background: var(--chart-bg);
+  background: var(--chart-surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.75rem;
 }
@@ -201,8 +218,139 @@ table.data-table tr:hover td { background: var(--surface2); }
 
 .chart-wrap.tall { height: 360px; }
 
+.chart-wrap.rank-chart {
+  height: auto;
+  min-height: 200px;
+}
+
 .season-chart-wrap {
   margin-top: 1.25rem;
+}
+
+.ranked-bar-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ranked-bar-row {
+  margin: 0;
+}
+
+.ranked-bar-link {
+  display: grid;
+  grid-template-columns: 1.75rem 2rem 1fr minmax(4rem, auto);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+.ranked-bar-link:hover {
+  background: var(--surface2);
+  text-decoration: none;
+}
+
+.ranked-bar-link--with-track {
+  grid-template-columns: 1.75rem 2rem minmax(6rem, 1.2fr) 1fr minmax(3.5rem, auto);
+}
+
+.ranked-bar-rank {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranked-bar-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.ranked-bar-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ranked-bar-track {
+  position: relative;
+  height: 8px;
+  background: var(--chart-track);
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.ranked-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+  opacity: 0.9;
+}
+
+.ranked-bar-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.g6-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.g6-stat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.g6-stat-card .stat-value {
+  font-size: 1.25rem;
+}
+
+.g6-mini-bar {
+  margin-top: 0.5rem;
+  height: 6px;
+  background: var(--chart-track);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.g6-mini-bar span {
+  display: block;
+  height: 100%;
+  background: var(--success);
+  border-radius: 999px;
+  min-width: 2px;
+}
+
+@media (max-width: 520px) {
+  .ranked-bar-link--with-track {
+    grid-template-columns: 1.5rem 1.75rem 1fr minmax(3rem, auto);
+    grid-template-rows: auto auto;
+  }
+  .ranked-bar-link--with-track .ranked-bar-track {
+    grid-column: 2 / -1;
+  }
+  .g6-stat-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .compare-grid {
@@ -904,6 +1052,7 @@ table.data-table.compact-table { font-size: 0.85rem; }
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
   }
 
   .navbar .brand { text-align: center; }
@@ -936,6 +1085,14 @@ table.data-table.compact-table { font-size: 0.85rem; }
     margin-left: 0;
     width: 100%;
     text-align: center;
+  }
+
+  .navbar-logo {
+    position: static;
+    transform: none;
+    height: 2.5rem;
+    width: auto;
+    margin: 0 auto;
   }
 
   .container { padding: 1rem; }
@@ -1055,5 +1212,5 @@ table.data-table.compact-table { font-size: 0.85rem; }
 }
 
 @media (max-width: 640px) {
-  .navbar .meta { margin-left: 0; width: 100%; }
+  .navbar .meta { margin-left: 0; width: 100%; text-align: center; }
 }

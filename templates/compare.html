@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% from 'macros.html' import conference_badge %}
+{% from 'macros.html' import conference_badge, chart_assets %}
 {% block title %}Compare Teams — CFB Simulation Viewer{% endblock %}
 {% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{{ chart_assets() }}
 {% endblock %}
 {% block content %}
 <h1>Compare Teams</h1>
@@ -70,21 +70,10 @@
 {% block scripts %}
 {% if selected|length >= 2 %}
 <script>
-  new Chart(document.getElementById('compareChart'), {
-    type: 'bar',
-    data: {
-      labels: ['0','1','2','3','4','5','6','7','8','9','10','11','12'],
-      datasets: {{ chart_datasets | tojson }}
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { title: { display: true, text: 'Wins' } },
-        y: { title: { display: true, text: 'Simulations' }, beginAtZero: true }
-      }
-    }
-  });
+  CFBCharts.makeCompareChart(
+    document.getElementById('compareChart'),
+    {{ chart_datasets | tojson }}
+  );
 </script>
 {% endif %}
 <script>

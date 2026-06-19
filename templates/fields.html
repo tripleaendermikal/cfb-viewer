@@ -1,9 +1,7 @@
 {% extends "base.html" %}
-{% from 'macros.html' import conference_badge %}
+{% from 'macros.html' import conference_badge, ranked_bar_list %}
 {% block title %}Playoff Field Analysis — CFB Simulation Viewer{% endblock %}
-{% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-{% endblock %}
+{% block head %}{% endblock %}
 {% block content %}
 <div class="fields-page">
   <header class="fields-hero">
@@ -111,9 +109,7 @@
   <div class="card">
     <h2 style="margin-top:0;font-size:1.1rem;">Most frequent playoff teams</h2>
     <p class="muted" style="margin-top:0;">Top 15 by field appearance rate across all simulations.</p>
-    <div class="chart-wrap tall">
-      <canvas id="fieldFreqChart"></canvas>
-    </div>
+    {{ ranked_bar_list(top_teams_ranked, value_key='pct', value_suffix='%') }}
     <div class="table-scroll">
     <table class="data-table compact-table">
       <thead>
@@ -192,8 +188,27 @@
       {% endif %}
       {% if analysis.g6_in_field %}
       <h3 style="font-size:0.95rem;margin:1.25rem 0 0.5rem;">G6 teams per field</h3>
-      <div class="chart-wrap" style="height:180px;">
-        <canvas id="g6FieldChart"></canvas>
+      {% set g6 = analysis.g6_in_field %}
+      {% set g6_total = (g6.get('0', 0) + g6.get('1', 0) + g6.get('2+', 0)) or 1 %}
+      <div class="g6-stat-grid">
+        <div class="g6-stat-card">
+          <div class="stat-label">0 G6 teams</div>
+          <div class="stat-value num">{{ g6.get('0', 0) }}</div>
+          <div class="muted" style="font-size:0.8rem;">{{ "%.1f"|format(g6.get('0', 0) / g6_total * 100) }}% of sims</div>
+          <div class="g6-mini-bar"><span style="width: {{ g6.get('0', 0) / g6_total * 100 }}%;"></span></div>
+        </div>
+        <div class="g6-stat-card">
+          <div class="stat-label">1 G6 team</div>
+          <div class="stat-value num">{{ g6.get('1', 0) }}</div>
+          <div class="muted" style="font-size:0.8rem;">{{ "%.1f"|format(g6.get('1', 0) / g6_total * 100) }}% of sims</div>
+          <div class="g6-mini-bar"><span style="width: {{ g6.get('1', 0) / g6_total * 100 }}%;"></span></div>
+        </div>
+        <div class="g6-stat-card">
+          <div class="stat-label">2+ G6 teams</div>
+          <div class="stat-value num">{{ g6.get('2+', 0) }}</div>
+          <div class="muted" style="font-size:0.8rem;">{{ "%.1f"|format(g6.get('2+', 0) / g6_total * 100) }}% of sims</div>
+          <div class="g6-mini-bar"><span style="width: {{ g6.get('2+', 0) / g6_total * 100 }}%;"></span></div>
+        </div>
       </div>
       {% endif %}
     </div>
@@ -273,62 +288,4 @@
     </div>
   </div>
 </div>
-{% endblock %}
-{% block scripts %}
-<script>
-  const barColor = '#4a9eff';
-  const topTeams = {{ analysis.top_teams[:15] | tojson }};
-  const freqEl = document.getElementById('fieldFreqChart');
-  if (freqEl && topTeams.length) {
-    new Chart(freqEl, {
-      type: 'bar',
-      data: {
-        labels: topTeams.map(t => t.team_name),
-        datasets: [{
-          label: 'Field %',
-          data: topTeams.map(t => t.pct),
-          backgroundColor: barColor + '99',
-          borderColor: barColor,
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
-          x: { ticks: { maxRotation: 45, minRotation: 45 } }
-        }
-      }
-    });
-  }
-  const g6Data = {{ analysis.g6_in_field | tojson }};
-  const g6El = document.getElementById('g6FieldChart');
-  if (g6El && g6Data) {
-    const labels = ['0 G6', '1 G6', '2+ G6'];
-    const keys = ['0', '1', '2+'];
-    new Chart(g6El, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Simulations',
-          data: keys.map(k => g6Data[k] || 0),
-          backgroundColor: '#6bcb7799',
-          borderColor: '#6bcb77',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: 'Sims' } }
-        }
-      }
-    });
-  }
-</script>
 {% endblock %}

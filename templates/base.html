@@ -30,6 +30,13 @@
       <a href="{{ url_for('last_year') }}" class="{% if active == 'last_year' %}active{% endif %}">Last Year</a>
     </nav>
     <div class="meta">{{ meta.sim_count }} sims · {{ meta.team_count }} teams</div>
+    <img
+      class="navbar-logo"
+      src="{{ url_for('static', filename='allen-ratings-logo.png') }}"
+      alt="Allen Ratings"
+      width="1408"
+      height="768"
+    >
   </header>
   <main class="container">
     {% block content %}{% endblock %}

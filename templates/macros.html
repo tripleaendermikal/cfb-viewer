@@ -1,3 +1,41 @@
+{% macro chart_assets() %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+{% endmacro %}
+
+{% macro ranked_bar_list(items, value_key='value', value_suffix='%', max_items=none, bar_color=none, scale_max=none) %}
+{% set list = items[:max_items] if max_items else items %}
+{% if list %}
+{% set bar_max = scale_max if scale_max is not none else (100 if value_suffix == '%' else (list | map(attribute=value_key) | max)) %}
+<ol class="ranked-bar-list">
+  {% for item in list %}
+  {% set val = item[value_key] %}
+  {% set color = bar_color or item.primary_color or '#4a9eff' %}
+  {% if value_suffix == '%' %}
+  {% set width_pct = [val, 100] | min %}
+  {% else %}
+  {% set width_pct = ([val, bar_max] | min / bar_max * 100) if bar_max else 0 %}
+  {% endif %}
+  <li class="ranked-bar-row">
+    <a class="ranked-bar-link ranked-bar-link--with-track" href="{{ url_for('team_detail', team_id=item.team_id) }}">
+      <span class="ranked-bar-rank">{{ loop.index }}</span>
+      {% if item.logo_url %}
+      <img class="ranked-bar-logo" src="{{ item.logo_url }}" alt="" width="28" height="28">
+      {% else %}
+      <span class="ranked-bar-logo" aria-hidden="true"></span>
+      {% endif %}
+      <span class="ranked-bar-name">{{ item.team_name }}</span>
+      <span class="ranked-bar-track">
+        <span class="ranked-bar-fill" style="width: {{ width_pct }}%; background: {{ color }};"></span>
+      </span>
+      <span class="ranked-bar-value num">{{ "%.1f"|format(val) }}{{ value_suffix }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>
+{% endif %}
+{% endmacro %}
+
 {% macro conference_badge(conf, variant='pill', small=false, stop_propagation=false) %}
   {% if conf %}
   <a href="{{ url_for('conferences', conference=conf) }}"

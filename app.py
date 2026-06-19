@@ -164,6 +164,22 @@ def conf_marquee_note(home_win_pct: float) -> str:
     return "A key conference matchup in the model."
 
 
+MARQUEE_MAX_APPEARANCES_PER_TEAM = 4
+FBS_INDEPENDENT_CONF = "FBS Indep."
+
+
+def _marquee_game_row(g: dict) -> dict:
+    home_wp = float(g.get("home_win_pct") or 0)
+    week = g.get("week")
+    return {
+        "game_id": g.get("game_id", ""),
+        "label": f"Week {week}" if week is not None else "",
+        "matchup": f"{g['away_team_name']} at {g['home_team_name']}",
+        "home_win_pct": home_wp,
+        "note": conf_marquee_note(home_wp),
+    }
+
+
 def conf_marquee_games(store: "DataStore", conf_name: str, limit: int = 10) -> list[dict]:
     """Top intra-conference games by team prestige and win-probability swing."""
     rows: list[tuple[float, float, dict]] = []
@@ -181,20 +197,42 @@ def conf_marquee_games(store: "DataStore", conf_name: str, limit: int = 10) -> l
         rows.append((prestige, abs(home_wp - 50), g))
 
     rows.sort(key=lambda x: (-x[0], x[1]))
+
+    if conf_name == FBS_INDEPENDENT_CONF:
+        return [_marquee_game_row(g) for _prestige, _swing, g in rows[:limit]]
+
+    team_counts: dict[str, int] = {}
     marquee: list[dict] = []
-    for _prestige, _swing, g in rows[:limit]:
-        home_wp = float(g.get("home_win_pct") or 0)
-        week = g.get("week")
-        marquee.append(
-            {
-                "game_id": g.get("game_id", ""),
-                "label": f"Week {week}" if week is not None else "",
-                "matchup": f"{g['away_team_name']} at {g['home_team_name']}",
-                "home_win_pct": home_wp,
-                "note": conf_marquee_note(home_wp),
-            }
-        )
+    for _prestige, _swing, g in rows:
+        if len(marquee) >= limit:
+            break
+        hid = g.get("home_team_id", "")
+        aid = g.get("away_team_id", "")
+        if team_counts.get(hid, 0) >= MARQUEE_MAX_APPEARANCES_PER_TEAM:
+            continue
+        if team_counts.get(aid, 0) >= MARQUEE_MAX_APPEARANCES_PER_TEAM:
+            continue
+        team_counts[hid] = team_counts.get(hid, 0) + 1
+        team_counts[aid] = team_counts.get(aid, 0) + 1
+        marquee.append(_marquee_game_row(g))
     return marquee
+
+
+def conference_avg_sos_rank(store: "DataStore", conf_name: str) -> tuple[int, int] | None:
+    """Return (rank, total) for conference avg SOS; rank 1 = toughest schedules."""
+    ranked: list[tuple[str, float]] = []
+    for c in store.conferences:
+        name = c["conference"]
+        avg_sos = store.conference_deep.get(name, {}).get("avg_sos")
+        if avg_sos is not None:
+            ranked.append((name, float(avg_sos)))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda x: -x[1])
+    for i, (name, _) in enumerate(ranked, start=1):
+        if name == conf_name:
+            return i, len(ranked)
+    return None
 
 
 class DataStore:
@@ -522,18 +560,21 @@ def team_logo_and_name(store: "DataStore", team_id: str) -> tuple[str, str]:
     return name, logo
 
 
+def enrich_team_ref(store: "DataStore", ref: dict) -> dict:
+    tid = str(ref.get("team_id", ""))
+    team = store.teams_by_id.get(tid, {})
+    name, logo = team_logo_and_name(store, tid)
+    out = dict(ref)
+    out["team_name"] = name
+    out["logo_url"] = logo
+    out["primary_color"] = team.get("primary_color") or "#4a9eff"
+    return out
+
+
 def enrich_season_summary(store: "DataStore", raw: dict) -> dict:
     """Attach team names and logo URLs from teams.json at render time."""
     if not raw:
         return {}
-
-    def enrich_team_ref(ref: dict) -> dict:
-        tid = str(ref.get("team_id", ""))
-        name, logo = team_logo_and_name(store, tid)
-        out = dict(ref)
-        out["team_name"] = name
-        out["logo_url"] = logo
-        return out
 
     hero = []
     for tid in raw.get("hero_team_ids", []):
@@ -544,12 +585,12 @@ def enrich_season_summary(store: "DataStore", raw: dict) -> dict:
     for section in raw.get("sections", []):
         sec = dict(section)
         if sec.get("featured_teams"):
-            sec["featured_teams"] = [enrich_team_ref(t) for t in sec["featured_teams"]]
+            sec["featured_teams"] = [enrich_team_ref(store, t) for t in sec["featured_teams"]]
         chart = sec.get("chart")
         if chart and chart.get("items"):
             sec["chart"] = {
                 **chart,
-                "items": [enrich_team_ref(item) for item in chart["items"]],
+                "items": [enrich_team_ref(store, item) for item in chart["items"]],
             }
         sections.append(sec)
 
@@ -888,6 +929,10 @@ def create_app() -> Flask:
         return render_template(
             "fields.html",
             analysis=store.field_analysis,
+            top_teams_ranked=[
+                enrich_team_ref(store, t)
+                for t in store.field_analysis.get("top_teams", [])[:15]
+            ],
             sim_index=sim_index,
             sim_field_rows=sim_field_rows,
             sim_error=sim_error,
@@ -967,6 +1012,7 @@ def create_app() -> Flask:
             conf_summary_entry = store.conference_summaries.get("summaries", {}).get(conf_name, {})
             conference_summary = conf_summary_entry.get("summary")
             marquee_games = conf_marquee_games(store, conf_name)
+            avg_sos_rank = conference_avg_sos_rank(store, conf_name)
 
             return render_template(
                 "conference_detail.html",
@@ -974,6 +1020,7 @@ def create_app() -> Flask:
                 deep=deep,
                 conference_summary=conference_summary,
                 marquee_games=marquee_games,
+                avg_sos_rank=avg_sos_rank,
                 champion_chart=deep.get("champion_chart", []),
                 finalist_chart=deep.get("finalist_chart", []),
                 playoff_hist_labels=playoff_hist_labels,

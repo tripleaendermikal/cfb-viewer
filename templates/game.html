@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% from 'macros.html' import conference_badge %}
+{% from 'macros.html' import conference_badge, chart_assets %}
 {% block title %}{{ game.away_team_name }} at {{ game.home_team_name }} — CFB Simulation Viewer{% endblock %}
 {% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{{ chart_assets() }}
 {% endblock %}
 {% block content %}
 <div class="game-page">
@@ -83,31 +83,22 @@
 {% endblock %}
 {% block scripts %}
 <script>
-  const homePrimary = {{ home_theme.primary | tojson }};
-  new Chart(document.getElementById('marginChart'), {
-    type: 'bar',
-    data: {
-      labels: {{ margin_labels | tojson }},
-      datasets: [{
-        label: 'Sim count',
-        data: {{ margin_data | tojson }},
-        backgroundColor: homePrimary + '99',
-        borderColor: homePrimary,
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          title: { display: true, text: 'Home margin (points)' },
-          ticks: { maxRotation: 45, minRotation: 45 }
-        },
-        y: { title: { display: true, text: 'Simulations' }, beginAtZero: true }
-      },
-      plugins: { legend: { display: false } }
-    }
-  });
+  (function() {
+    const labels = {{ margin_labels | tojson }};
+    const avgMargin = {{ game.avg_margin | tojson }};
+    CFBCharts.makeDistributionChart(
+      document.getElementById('marginChart'),
+      labels,
+      {{ margin_data | tojson }},
+      {{ home_theme.primary | tojson }},
+      {
+        xTitle: 'Home margin (points)',
+        yTitle: 'Simulations',
+        xMaxTicks: 10,
+        referenceIndex: CFBCharts.closestLabelIndex(labels, avgMargin),
+        referenceColor: '#f5a524',
+      }
+    );
+  })();
 </script>
 {% endblock %}

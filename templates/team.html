@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% from 'macros.html' import conference_badge %}
+{% from 'macros.html' import conference_badge, chart_assets %}
 {% block title %}{{ team.team_name }} — CFB Simulation Viewer{% endblock %}
 {% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{{ chart_assets() }}
 {% endblock %}
 {% block content %}
 <div class="team-page" style="--team-primary: {{ team_theme.primary }}; --team-alt: {{ team_theme.alternate }}; --team-on-primary: {{ team_theme.on_primary }};">
@@ -127,28 +127,12 @@
 {% endblock %}
 {% block scripts %}
 <script>
-  const teamPrimary = {{ team_theme.primary | tojson }};
-  new Chart(document.getElementById('winChart'), {
-    type: 'bar',
-    data: {
-      labels: {{ hist_labels | tojson }},
-      datasets: [{
-        label: 'Sim count',
-        data: {{ hist_data | tojson }},
-        backgroundColor: teamPrimary + '99',
-        borderColor: teamPrimary,
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { title: { display: true, text: 'Wins' } },
-        y: { title: { display: true, text: 'Simulations' }, beginAtZero: true }
-      },
-      plugins: { legend: { display: false } }
-    }
-  });
+  CFBCharts.makeDistributionChart(
+    document.getElementById('winChart'),
+    {{ hist_labels | tojson }},
+    {{ hist_data | tojson }},
+    {{ team_theme.primary | tojson }},
+    { xTitle: 'Wins', yTitle: 'Simulations' }
+  );
 </script>
 {% endblock %}

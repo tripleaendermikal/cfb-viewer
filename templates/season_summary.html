@@ -1,9 +1,7 @@
 {% extends "base.html" %}
-{% from 'macros.html' import conference_badge %}
+{% from 'macros.html' import conference_badge, ranked_bar_list %}
 {% block title %}{{ preview.title }} — CFB Simulation Viewer{% endblock %}
-{% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-{% endblock %}
+{% block head %}{% endblock %}
 {% block content %}
 <div class="season-page">
   <header class="season-hero">
@@ -49,9 +47,7 @@
     {% endif %}
 
     {% if section.chart %}
-    <div class="season-chart-wrap">
-      <canvas id="{{ section.chart['id'] }}"></canvas>
-    </div>
+    {{ ranked_bar_list(section.chart['items'], value_key='value', value_suffix='%') }}
     {% endif %}
   </article>
   {% endfor %}
@@ -125,38 +121,4 @@
     </p>
   </footer>
 </div>
-{% endblock %}
-{% block scripts %}
-<script>
-  const chartOpts = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: '%' } },
-      x: { ticks: { maxRotation: 45, minRotation: 45 } }
-    }
-  };
-  {% for section in preview.sections if section.chart %}
-  (function() {
-    const items = {{ section.chart['items'] | tojson }};
-    const el = document.getElementById({{ section.chart['id'] | tojson }});
-    if (!el) return;
-    new Chart(el, {
-      type: 'bar',
-      data: {
-        labels: items.map(i => i.team_name),
-        datasets: [{
-          label: {{ section.chart['label'] | tojson }},
-          data: items.map(i => i.value),
-          backgroundColor: '#4a9eff99',
-          borderColor: '#4a9eff',
-          borderWidth: 1
-        }]
-      },
-      options: chartOpts
-    });
-  })();
-  {% endfor %}
-</script>
 {% endblock %}

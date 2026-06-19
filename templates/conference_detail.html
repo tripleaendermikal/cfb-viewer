@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% from 'macros.html' import chart_assets %}
 {% block title %}{{ conf.conference }} — CFB Simulation Viewer{% endblock %}
 {% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{{ chart_assets() }}
 {% endblock %}
 {% block content %}
 <div class="conf-page" style="--conf-color: {{ conf.conference | conf_color }};">
@@ -44,6 +45,9 @@
     <div class="card conf-accent-card">
       <div class="stat-label">Avg SOS</div>
       <div class="stat-value">{{ "%+.1f"|format(deep.avg_sos) }}</div>
+      {% if avg_sos_rank %}
+      <div class="muted" style="font-size:0.8rem;">#{{ avg_sos_rank[0] }} of {{ avg_sos_rank[1] }} conferences</div>
+      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -97,7 +101,7 @@
     {% if champion_chart %}
     <div class="card conf-accent-card">
       <h2 style="margin-top:0;font-size:1.1rem;">Who wins {{ conf.conference }}?</h2>
-      <div class="chart-wrap">
+      <div class="chart-wrap rank-chart" id="champChartWrap" style="height: {{ [280, champion_chart|length * 28 + 60]|max }}px;">
         <canvas id="champChart"></canvas>
       </div>
     </div>
@@ -105,7 +109,7 @@
     {% if finalist_chart %}
     <div class="card conf-accent-card">
       <h2 style="margin-top:0;font-size:1.1rem;">CCG finalists</h2>
-      <div class="chart-wrap">
+      <div class="chart-wrap rank-chart" id="finalistChartWrap" style="height: {{ [280, finalist_chart|length * 28 + 60]|max }}px;">
         <canvas id="finalistChart"></canvas>
       </div>
     </div>
@@ -206,81 +210,31 @@
 {% if champion_chart or finalist_chart or playoff_hist_labels %}
 <script>
   const confColor = {{ (conf.conference | conf_color) | tojson }};
-  const countChartOpts = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, title: { display: true, text: 'Simulations' } } }
-  };
-  const pctChartOpts = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, title: { display: true, text: '% of sims' } } }
-  };
+  function chartRows(rows) {
+    return rows.map(function(r) { return { label: r.team_name, value: r.pct }; });
+  }
   {% if champion_chart %}
-  new Chart(document.getElementById('champChart'), {
-    type: 'bar',
-    data: {
-      labels: {{ champion_chart | map(attribute='team_name') | list | tojson }},
-      datasets: [{
-        data: {{ champion_chart | map(attribute='pct') | list | tojson }},
-        backgroundColor: confColor + '99',
-        borderColor: confColor,
-        borderWidth: 1
-      }]
-    },
-    options: {
-      ...pctChartOpts,
-      scales: {
-        ...pctChartOpts.scales,
-        x: { ticks: { maxRotation: 45, minRotation: 45 } }
-      }
-    }
-  });
+  CFBCharts.makeHorizontalRank(
+    document.getElementById('champChart'),
+    chartRows({{ champion_chart | tojson }}),
+    confColor
+  );
   {% endif %}
   {% if finalist_chart %}
-  new Chart(document.getElementById('finalistChart'), {
-    type: 'bar',
-    data: {
-      labels: {{ finalist_chart | map(attribute='team_name') | list | tojson }},
-      datasets: [{
-        data: {{ finalist_chart | map(attribute='pct') | list | tojson }},
-        backgroundColor: confColor + '66',
-        borderColor: confColor,
-        borderWidth: 1
-      }]
-    },
-    options: {
-      ...pctChartOpts,
-      scales: {
-        ...pctChartOpts.scales,
-        x: { ticks: { maxRotation: 45, minRotation: 45 } }
-      }
-    }
-  });
+  CFBCharts.makeHorizontalRank(
+    document.getElementById('finalistChart'),
+    chartRows({{ finalist_chart | tojson }}),
+    confColor
+  );
   {% endif %}
   {% if playoff_hist_labels %}
-  new Chart(document.getElementById('playoffCountChart'), {
-    type: 'bar',
-    data: {
-      labels: {{ playoff_hist_labels | tojson }},
-      datasets: [{
-        label: 'Sims',
-        data: {{ playoff_hist_data | tojson }},
-        backgroundColor: confColor + '99',
-        borderColor: confColor,
-        borderWidth: 1
-      }]
-    },
-    options: {
-      ...countChartOpts,
-      scales: {
-        x: { title: { display: true, text: 'Teams in playoff field' } },
-        y: countChartOpts.scales.y
-      }
-    }
-  });
+  CFBCharts.makeHistogramChart(
+    document.getElementById('playoffCountChart'),
+    {{ playoff_hist_labels | tojson }},
+    {{ playoff_hist_data | tojson }},
+    confColor,
+    { xTitle: 'Teams in playoff field', yTitle: 'Simulations' }
+  );
   {% endif %}
 </script>
 {% endif %}
