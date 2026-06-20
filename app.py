@@ -552,6 +552,23 @@ def is_fbs_team(team: dict) -> bool:
     return is_fbs_conference(team.get("conference", ""))
 
 
+def win_distribution_stats(histogram: dict) -> tuple[int, float]:
+    counts = [int(histogram.get(str(w), 0) or 0) for w in range(13)]
+    total = sum(counts)
+    if total <= 0:
+        return 0, 0.0
+    cumulative = 0
+    median = 0
+    half = total / 2
+    for w, c in enumerate(counts):
+        cumulative += c
+        if cumulative >= half:
+            median = w
+            break
+    bowl = sum(counts[6:])
+    return median, round(bowl / total * 100, 1)
+
+
 def team_logo_and_name(store: "DataStore", team_id: str) -> tuple[str, str]:
     team = store.teams_by_id.get(str(team_id), {})
     lb = store.lb_by_id.get(str(team_id), {})
@@ -801,6 +818,9 @@ def create_app() -> Flask:
         ccg = store.conf_championship_summary.get("team_summary", {}).get(team_id, {})
         merged["ccg_appearances"] = ccg.get("ccg_appearances", merged["conf_champ_appearances"])
         merged["ccg_wins"] = ccg.get("ccg_wins", 0)
+        median_wins, bowl_eligibility_pct = win_distribution_stats(merged["win_histogram"])
+        merged["median_wins"] = median_wins
+        merged["bowl_eligibility_pct"] = bowl_eligibility_pct
         bracket_summary = store.brackets_summary.get("team_summary", {}).get(team_id)
         team_schedule = store.team_schedule(team_id)
         conference = merged.get("conference", "")

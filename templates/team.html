@@ -54,6 +54,14 @@
     <div class="stat-label">Avg Wins</div>
     <div class="stat-value">{{ "%.2f"|format(team.avg_wins or 0) }}</div>
   </div>
+  <div class="card">
+    <div class="stat-label">Median Expected Wins</div>
+    <div class="stat-value">{{ team.median_wins }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Bowl Eligibility</div>
+    <div class="stat-value">{{ team.bowl_eligibility_pct }}%</div>
+  </div>
   {% if team.baseline_fpi is not none %}
   <div class="card">
     <div class="stat-label">Rating</div>
